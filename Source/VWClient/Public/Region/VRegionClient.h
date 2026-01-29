@@ -11,7 +11,10 @@
 #include "VRegionClient.generated.h"
 
 class USceneComponent;
-class UVItemPresenter;
+class UVDecalPresenter;
+class UVLightPresenter;
+class UVMaterialPresenter;
+class UVMeshPresenter;
 class UVAssetManager;
 class UVCollisionPresenter;
 
@@ -47,7 +50,16 @@ private:
 	TObjectPtr<USceneComponent> CollisionRoot;
 
 	UPROPERTY()
-	TObjectPtr<UVItemPresenter> ItemPresenter;
+	TObjectPtr<UVMeshPresenter> MeshPresenter;
+
+	UPROPERTY()
+	TObjectPtr<UVMaterialPresenter> MaterialPresenter;
+
+	UPROPERTY()
+	TObjectPtr<UVLightPresenter> LightPresenter;
+
+	UPROPERTY()
+	TObjectPtr<UVDecalPresenter> DecalPresenter;
 
 	UPROPERTY()
 	TObjectPtr<UVCollisionPresenter> CollisionPresenter;
