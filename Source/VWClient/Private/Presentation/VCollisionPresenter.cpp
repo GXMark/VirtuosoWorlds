@@ -4,6 +4,7 @@
 #include "Components/BoxComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/PrimitiveComponent.h"
 #include "Engine/CollisionProfile.h"
 #include "ProceduralMeshComponent.h"
 
@@ -71,7 +72,10 @@ void UVCollisionPresenter::OnItemRemoved(const FGuid& ItemId)
 	{
 		if (Instance->ItemRoot)
 		{
-			Instance->ItemRoot->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			if (UPrimitiveComponent* PrimitiveRoot = Cast<UPrimitiveComponent>(Instance->ItemRoot))
+			{
+				PrimitiveRoot->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			}
 		}
 		DestroyPrimitives(*Instance);
 		if (Instance->ItemRoot)
