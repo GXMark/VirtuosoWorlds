@@ -95,6 +95,7 @@ private:
 	bool bCollisionRequestInFlight = false;
 	TSet<FGuid> ReceivedCollisionIds;
 	TSet<FGuid> InFlightCollisionIds;
+	TSet<FGuid> PendingCollisionIdSet;
 	TArray<FGuid> PendingCollisionIds;
 	int32 MaxCollisionItemLimit = 64;
 
@@ -117,4 +118,7 @@ public:
 
 	// Called by the local player controller when a collision batch response arrives.
 	void OnCollisionsBatchReceived(const TArray<FVMCollision>& Collisions);
+
+	// Called when a spatial item unloads.
+	void OnSpatialItemRemoved(const FGuid& ItemId);
 };
