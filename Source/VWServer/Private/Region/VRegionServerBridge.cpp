@@ -113,12 +113,31 @@ void URegionServerBridge::EnsureSpatialState(APlayerController* PC)
 		return Out;
 	};
 
+	auto MakeDecalNet = [](const FVMDecalComponent& In)
+	{
+		FVMDecalComponentNet Out;
+		Out.material_id = FVMGuidNet(In.material_ref.id);
+		Out.size = In.size;
+		Out.color = FVMLinearColorNet(In.color.name, In.color.color);
+		Out.fade_screen_size = In.fade_screen_size;
+		Out.fade_in_start_delay = In.fade_in_start_delay;
+		Out.fade_in_duration = In.fade_in_duration;
+		Out.fade_out_start_delay = In.fade_out_start_delay;
+		Out.fade_out_duration = In.fade_out_duration;
+		Out.destroy_after_fade_out = In.destroy_after_fade_out;
+		return Out;
+	};
+
 	for (const FVMActor& A : ActorItems)
 	{
 		ESpatialItemType PayloadType;
 		if (A.type == FVActorType::StaticMeshActor || A.type == FVActorType::HISMActor)
 		{
 			PayloadType = ESpatialItemType::Mesh;
+		}
+		else if (A.type == FVActorType::DecalActor)
+		{
+			PayloadType = ESpatialItemType::Decal;
 		}
 		else if (A.type == FVActorType::PointLightActor)
 		{
@@ -151,6 +170,10 @@ void URegionServerBridge::EnsureSpatialState(APlayerController* PC)
 		else if (PayloadType == ESpatialItemType::SpotLight)
 		{
 			Item.SpotLightPayload = MakeSpotLightNet(A.component.spot_light_comp);
+		}
+		else if (PayloadType == ESpatialItemType::Decal)
+		{
+			Item.DecalPayload = MakeDecalNet(A.component.decal_comp);
 		}
 
 		State.AllItems.Add(Item);
