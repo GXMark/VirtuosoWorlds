@@ -5,7 +5,6 @@
 #include "Constant/Constants.h"
 #include "Helper/StatsHelper.h"
 #include "Model/Package/MPActor.h"
-#include "Model/Package/MPComponent.h"
 
 /**
  * Serialize the point light component
@@ -49,7 +48,7 @@ bool FCPLightHelper::SerializePointLightComponent(const UPointLightComponent* In
 	PLComponent.indirect_light_intensity = InComponent->IndirectLightingIntensity;
 	PLComponent.volumetric_scatter_intensity = InComponent->VolumetricScatteringIntensity;
 
-	OutActorItem.component.point_light_comp = PLComponent;
+	OutActorItem.point_light_comp = PLComponent;
 	
 	FCPStatsHelper::TotalPointLights++;
 
@@ -106,7 +105,7 @@ bool FCPLightHelper::SerializeSpotLightComponent(const USpotLightComponent* InCo
 	SLComponent.indirect_light_intensity = InComponent->IndirectLightingIntensity;
 	SLComponent.volumetric_scatter_intensity = InComponent->VolumetricScatteringIntensity;
 
-	OutActorItem.component.spot_light_comp = SLComponent;
+	OutActorItem.spot_light_comp = SLComponent;
 	
 	FCPStatsHelper::TotalSpotLights++;
 

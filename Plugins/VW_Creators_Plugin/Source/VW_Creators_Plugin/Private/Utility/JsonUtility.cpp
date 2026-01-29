@@ -25,55 +25,49 @@ FString FJsonUtility::ToJsonString(const FMPPackage& Package)
 			FString ActorType;
 			ActorObj->TryGetStringField(TEXT("type"), ActorType);
 
-			const TSharedPtr<FJsonObject>* CompObjPtr = nullptr;
-			if (ActorObj->TryGetObjectField(TEXT("component"), CompObjPtr) && CompObjPtr && CompObjPtr->IsValid())
+			// Now use CompObj normally
+			if (ActorType == FPTargetType::StaticMeshActor)
 			{
-				const TSharedPtr<FJsonObject>& CompObj = *CompObjPtr;
-
-				// Now use CompObj normally
-				if (ActorType == FPTargetType::StaticMeshActor)
-				{
-					CompObj->RemoveField(TEXT("hism_comp"));
-					CompObj->RemoveField(TEXT("decal_comp"));
-					CompObj->RemoveField(TEXT("point_light_comp"));
-					CompObj->RemoveField(TEXT("spot_light_comp"));
-				}
-				else if (ActorType == FPTargetType::HISMActor)
-				{
-					CompObj->RemoveField(TEXT("static_mesh_comp"));
-					CompObj->RemoveField(TEXT("decal_comp"));
-					CompObj->RemoveField(TEXT("point_light_comp"));
-					CompObj->RemoveField(TEXT("spot_light_comp"));
-				}
-				else if (ActorType == FPTargetType::DecalActor)
-				{
-					CompObj->RemoveField(TEXT("static_mesh_comp"));
-					CompObj->RemoveField(TEXT("hism_comp"));
-					CompObj->RemoveField(TEXT("point_light_comp"));
-					CompObj->RemoveField(TEXT("spot_light_comp"));
-				}
-				else if (ActorType == FPTargetType::PointLightActor)
-				{
-					CompObj->RemoveField(TEXT("static_mesh_comp"));
-					CompObj->RemoveField(TEXT("hism_comp"));
-					CompObj->RemoveField(TEXT("decal_comp"));
-					CompObj->RemoveField(TEXT("spot_light_comp"));
-				}
-				else if (ActorType == FPTargetType::SpotLightActor)
-				{
-					CompObj->RemoveField(TEXT("static_mesh_comp"));
-					CompObj->RemoveField(TEXT("hism_comp"));
-					CompObj->RemoveField(TEXT("decal_comp"));
-					CompObj->RemoveField(TEXT("point_light_comp"));
-				}
-				else if (ActorType == FPTargetType::SceneActor)
-				{
-					CompObj->RemoveField(TEXT("static_mesh_comp"));
-					CompObj->RemoveField(TEXT("hism_comp"));
-					CompObj->RemoveField(TEXT("decal_comp"));
-					CompObj->RemoveField(TEXT("point_light_comp"));
-					CompObj->RemoveField(TEXT("spot_light_comp"));
-				}
+				ActorObj->RemoveField(TEXT("hism_comp"));
+				ActorObj->RemoveField(TEXT("decal_comp"));
+				ActorObj->RemoveField(TEXT("point_light_comp"));
+				ActorObj->RemoveField(TEXT("spot_light_comp"));
+			}
+			else if (ActorType == FPTargetType::HISMActor)
+			{
+				ActorObj->RemoveField(TEXT("static_mesh_comp"));
+				ActorObj->RemoveField(TEXT("decal_comp"));
+				ActorObj->RemoveField(TEXT("point_light_comp"));
+				ActorObj->RemoveField(TEXT("spot_light_comp"));
+			}
+			else if (ActorType == FPTargetType::DecalActor)
+			{
+				ActorObj->RemoveField(TEXT("static_mesh_comp"));
+				ActorObj->RemoveField(TEXT("hism_comp"));
+				ActorObj->RemoveField(TEXT("point_light_comp"));
+				ActorObj->RemoveField(TEXT("spot_light_comp"));
+			}
+			else if (ActorType == FPTargetType::PointLightActor)
+			{
+				ActorObj->RemoveField(TEXT("static_mesh_comp"));
+				ActorObj->RemoveField(TEXT("hism_comp"));
+				ActorObj->RemoveField(TEXT("decal_comp"));
+				ActorObj->RemoveField(TEXT("spot_light_comp"));
+			}
+			else if (ActorType == FPTargetType::SpotLightActor)
+			{
+				ActorObj->RemoveField(TEXT("static_mesh_comp"));
+				ActorObj->RemoveField(TEXT("hism_comp"));
+				ActorObj->RemoveField(TEXT("decal_comp"));
+				ActorObj->RemoveField(TEXT("point_light_comp"));
+			}
+			else if (ActorType == FPTargetType::SceneActor)
+			{
+				ActorObj->RemoveField(TEXT("static_mesh_comp"));
+				ActorObj->RemoveField(TEXT("hism_comp"));
+				ActorObj->RemoveField(TEXT("decal_comp"));
+				ActorObj->RemoveField(TEXT("point_light_comp"));
+				ActorObj->RemoveField(TEXT("spot_light_comp"));
 			}
 		}
 	}

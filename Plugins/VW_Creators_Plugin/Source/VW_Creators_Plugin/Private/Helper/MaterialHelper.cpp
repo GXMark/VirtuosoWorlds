@@ -281,7 +281,7 @@ bool FCPMaterialHelper::SerializeDecalComponent(const UDecalComponent* InCompone
 	
 	DecalComponent.material_ref = FMPAssetRef(MaterialItem.id, MaterialItem.name, FPAssetType::Material, FName(DecalMaterial->GetPathName()), NAME_None);
 
-	OutActorItem.component.decal_comp = DecalComponent;
+	OutActorItem.decal_comp = DecalComponent;
 	
 	FCPStatsHelper::TotalDecals++;
 

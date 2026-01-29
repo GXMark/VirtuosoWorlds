@@ -18,7 +18,7 @@ PRAGMA_DISABLE_DEPRECATION_WARNINGS
 
 // ********** Begin ScriptStruct FMPActor **********************************************************
 struct Z_Construct_UScriptStruct_FMPActor_Statics;
-#define FID_VGS_Development_Unreal_Projects_VirtuosoWorlds_Plugins_VW_Creators_Plugin_Source_VW_Creators_Plugin_Public_Model_Package_MPActor_h_11_GENERATED_BODY \
+#define FID_VGS_Development_Unreal_Projects_VirtuosoWorlds_Plugins_VW_Creators_Plugin_Source_VW_Creators_Plugin_Public_Model_Package_MPActor_h_14_GENERATED_BODY \
 	friend struct ::Z_Construct_UScriptStruct_FMPActor_Statics; \
 	VW_CREATORS_PLUGIN_API static class UScriptStruct* StaticStruct();
 

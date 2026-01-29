@@ -68,7 +68,7 @@ bool FPMeshHelper::SerializeMeshComponent(const UStaticMeshComponent* InComponen
 			SMComponent.material_refs.Add(FMPAssetRef(MaterialItem.id, MaterialItem.name, FPAssetType::Material, FName(Materials[MaterialIndex]->GetPathName()), NAME_None));
 		}
 
-		OutActorItem.component.mesh_comp = SMComponent;
+		OutActorItem.mesh_comp = SMComponent;
 		
 		FCPStatsHelper::UpdateMeshGroups(SMComponent.mesh_ref, SMComponent.material_refs);
 		

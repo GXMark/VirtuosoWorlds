@@ -4,8 +4,14 @@
 #include "UObject/Object.h"
 // NOTE: These types are stored by value in stream state and must be complete in this header.
 #include "Model/Network/VMSpatialItemNet.h"
+#include "Model/Package/VMActor.h"
 #include "Model/Package/VMMaterial.h"
 #include "Model/Package/VMCollision.h"
+#include "Model/Package/VMDecalComponent.h"
+#include "Model/Package/VMMeshComponent.h"
+#include "Model/Package/VMPointLightComponent.h"
+#include "Model/Package/VMSpotLightComponent.h"
+#include "Model/Package/VMTransform.h"
 #include "VRegionServerBridge.generated.h"
 
 
@@ -32,12 +38,12 @@ public:
 	// Materials
 	void HandleMaterialsRequest(
 		APlayerController* PC,
-		const TArray<FGuid>& MaterialIds);
+		const TArray<FGuid>& MaterialIds) const;
 
 	// Collisions
 	void HandleCollisionsRequest(
 		APlayerController* PC,
-		const TArray<FGuid>& CollisionIds);
+		const TArray<FGuid>& CollisionIds) const;
 
 private:
 	UPROPERTY()
@@ -59,8 +65,8 @@ private:
 	FVMPointLightComponentNet MakePointLightNet(const FVMPointLightComponent& In) const;
 	FVMSpotLightComponentNet MakeSpotLightNet(const FVMSpotLightComponent& In) const;
 	FVMDecalComponentNet MakeDecalNet(const FVMDecalComponent& In) const;
-	void AddMeshSpatialItem(const FVMActor& Actor, FSpatialStreamState& State);
-	void AddPointLightSpatialItem(const FVMActor& Actor, FSpatialStreamState& State);
-	void AddSpotLightSpatialItem(const FVMActor& Actor, FSpatialStreamState& State);
-	void AddDecalSpatialItem(const FVMActor& Actor, FSpatialStreamState& State);
+	void AddMeshSpatialItem(const FVMActor& Actor, FSpatialStreamState& State) const;
+	void AddPointLightSpatialItem(const FVMActor& Actor, FSpatialStreamState& State) const;
+	void AddSpotLightSpatialItem(const FVMActor& Actor, FSpatialStreamState& State) const;
+	void AddDecalSpatialItem(const FVMActor& Actor, FSpatialStreamState& State) const;
 };

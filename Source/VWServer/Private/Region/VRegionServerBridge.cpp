@@ -149,51 +149,51 @@ FVMDecalComponentNet URegionServerBridge::MakeDecalNet(const FVMDecalComponent& 
 	return Out;
 }
 
-void URegionServerBridge::AddMeshSpatialItem(const FVMActor& Actor, FSpatialStreamState& State)
+void URegionServerBridge::AddMeshSpatialItem(const FVMActor& Actor, FSpatialStreamState& State) const
 {
 	FVMSpatialItemNet Item;
 	Item.ItemID = FVMGuidNet(Actor.id);
 	Item.ParentID = FVMGuidNet(Actor.pid);
-	Item.CollisionID = FVMGuidNet(Actor.component.collision_id);
+	Item.CollisionID = FVMGuidNet(Actor.collision_id);
 	Item.PayloadType = ESpatialItemType::Mesh;
 	Item.Transform = MakeNetTransform(Actor.transform);
-	Item.MeshPayload = MakeMeshNet(Actor.component.mesh_comp);
+	Item.MeshPayload = MakeMeshNet(Actor.mesh_comp);
 	State.AllItems.Add(Item);
 }
 
-void URegionServerBridge::AddPointLightSpatialItem(const FVMActor& Actor, FSpatialStreamState& State)
+void URegionServerBridge::AddPointLightSpatialItem(const FVMActor& Actor, FSpatialStreamState& State) const
 {
 	FVMSpatialItemNet Item;
 	Item.ItemID = FVMGuidNet(Actor.id);
 	Item.ParentID = FVMGuidNet(Actor.pid);
-	Item.CollisionID = FVMGuidNet(Actor.component.collision_id);
+	Item.CollisionID = FVMGuidNet(Actor.collision_id);
 	Item.PayloadType = ESpatialItemType::PointLight;
 	Item.Transform = MakeNetTransform(Actor.transform);
-	Item.PointLightPayload = MakePointLightNet(Actor.component.point_light_comp);
+	Item.PointLightPayload = MakePointLightNet(Actor.point_light_comp);
 	State.AllItems.Add(Item);
 }
 
-void URegionServerBridge::AddSpotLightSpatialItem(const FVMActor& Actor, FSpatialStreamState& State)
+void URegionServerBridge::AddSpotLightSpatialItem(const FVMActor& Actor, FSpatialStreamState& State) const
 {
 	FVMSpatialItemNet Item;
 	Item.ItemID = FVMGuidNet(Actor.id);
 	Item.ParentID = FVMGuidNet(Actor.pid);
-	Item.CollisionID = FVMGuidNet(Actor.component.collision_id);
+	Item.CollisionID = FVMGuidNet(Actor.collision_id);
 	Item.PayloadType = ESpatialItemType::SpotLight;
 	Item.Transform = MakeNetTransform(Actor.transform);
-	Item.SpotLightPayload = MakeSpotLightNet(Actor.component.spot_light_comp);
+	Item.SpotLightPayload = MakeSpotLightNet(Actor.spot_light_comp);
 	State.AllItems.Add(Item);
 }
 
-void URegionServerBridge::AddDecalSpatialItem(const FVMActor& Actor, FSpatialStreamState& State)
+void URegionServerBridge::AddDecalSpatialItem(const FVMActor& Actor, FSpatialStreamState& State) const
 {
 	FVMSpatialItemNet Item;
 	Item.ItemID = FVMGuidNet(Actor.id);
 	Item.ParentID = FVMGuidNet(Actor.pid);
-	Item.CollisionID = FVMGuidNet(Actor.component.collision_id);
+	Item.CollisionID = FVMGuidNet(Actor.collision_id);
 	Item.PayloadType = ESpatialItemType::Decal;
 	Item.Transform = MakeNetTransform(Actor.transform);
-	Item.DecalPayload = MakeDecalNet(Actor.component.decal_comp);
+	Item.DecalPayload = MakeDecalNet(Actor.decal_comp);
 	State.AllItems.Add(Item);
 }
 
@@ -261,7 +261,7 @@ void URegionServerBridge::HandleSpatialRequest(
 
 void URegionServerBridge::HandleMaterialsRequest(
 	APlayerController* PC,
-	const TArray<FGuid>& MaterialIds)
+	const TArray<FGuid>& MaterialIds) const
 {
 	if (!World)
 	{
@@ -305,7 +305,7 @@ void URegionServerBridge::HandleMaterialsRequest(
 
 void URegionServerBridge::HandleCollisionsRequest(
 	APlayerController* PC,
-	const TArray<FGuid>& CollisionIds)
+	const TArray<FGuid>& CollisionIds) const
 {
 	if (!World)
 	{

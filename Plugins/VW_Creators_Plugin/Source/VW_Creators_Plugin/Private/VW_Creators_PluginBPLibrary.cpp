@@ -566,8 +566,9 @@ void UVW_Creators_PluginBPLibrary::BuildPackage(AActor* InActor)
 					ActorItem.pid = ActorItem.id;
 					ActorItem.name = FName(InActor->GetActorLabel());
 					ActorItem.type = FPTargetType::StaticMeshActor;
-					ActorItem.component.mesh_comp.mesh_ref = MeshRef;
-					ActorItem.component.mesh_comp.material_refs = MaterialRefs;
+					ActorItem.mesh_comp.mesh_ref = MeshRef;
+					ActorItem.mesh_comp.material_refs = MaterialRefs;
+					ActorItem.collision_id = MeshRef.id;
 					ActorItem.transform = Transform;
 					ActorItems.Add(ActorItem);
 					
@@ -695,6 +696,7 @@ void UVW_Creators_PluginBPLibrary::FlattenBlueprintActor(
                         Package.materials);
 
                     ActorItem.type = FPTargetType::StaticMeshActor;
+                	ActorItem.collision_id = ActorItem.id; 
                 }
                 else if (Comp->GetClass() == UDecalComponent::StaticClass())
                 {
@@ -796,7 +798,9 @@ bool UVW_Creators_PluginBPLibrary::SerializeActorComponent(const AActor* InActor
 	{
 		if (FPMeshHelper::SerializeMeshComponent(SMComponent, OutActorItem, OutMaterialItems))
 		{
+			OutActorItem.id = GetActorID(InActor->GetUniqueID());
 			OutActorItem.type = FPTargetType::StaticMeshActor;
+			OutActorItem.collision_id = OutActorItem.id;
 			bSuccess = true;
 		}
 	}
