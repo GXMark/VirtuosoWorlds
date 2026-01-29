@@ -5,11 +5,12 @@
 #include "Components/SphereComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Engine/CollisionProfile.h"
+#include "ProceduralMeshComponent.h"
 
 void UVCollisionPresenter::Initialize(AActor* InOwner, USceneComponent* InCollisionRoot)
 {
 	OwnerActor = InOwner;
-	CollisionRoot = InCollisionRoot;
+	CollisionRoot = InCollisionRoot ? InCollisionRoot : (InOwner ? InOwner->GetRootComponent() : nullptr);
 }
 
 void UVCollisionPresenter::OnItemUpsert(const FGuid& ItemId, const FTransform& WorldTransform, const FGuid& CollisionId)
@@ -33,6 +34,10 @@ void UVCollisionPresenter::SubmitCollisionDefs(const TArray<FVMCollision>& Colli
 		{
 			continue;
 		}
+		if (!LoadedCollisionIds.Contains(Col.id))
+		{
+			LoadedCollisionIds.Add(Col.id);
+		}
 		CollisionDefsById.Add(Col.id, Col);
 	}
 
@@ -52,6 +57,25 @@ void UVCollisionPresenter::SubmitCollisionDefs(const TArray<FVMCollision>& Colli
 			}
 		}
 	}
+}
+
+void UVCollisionPresenter::OnItemRemoved(const FGuid& ItemId)
+{
+	FVCollisionInstance* Instance = InstancesByItemId.Find(ItemId);
+	if (Instance)
+	{
+		DestroyPrimitives(*Instance);
+		if (Instance->ItemRoot)
+		{
+			UE_LOG(LogTemp, Log, TEXT("CollisionPresenter: Removed collision root for ItemId=%s"), *ItemId.ToString());
+			Instance->ItemRoot->DestroyComponent();
+			Instance->ItemRoot = nullptr;
+		}
+	}
+
+	InstancesByItemId.Remove(ItemId);
+	CollisionIdByItemId.Remove(ItemId);
+	ItemWorldTransformById.Remove(ItemId);
 }
 
 void UVCollisionPresenter::RebuildItem(const FGuid& ItemId)
@@ -78,8 +102,12 @@ void UVCollisionPresenter::RebuildItem(const FGuid& ItemId)
 	// No collision for this item => clear primitives.
 	if (!ColId.IsValid())
 	{
-		DestroyPrimitives(Instance);
-		Instance.CollisionId = FGuid(0,0,0,0);
+		if (HasAnyPrimitives(Instance))
+		{
+			UE_LOG(LogTemp, Log, TEXT("CollisionPresenter: Clearing collision for ItemId=%s"), *ItemId.ToString());
+			DestroyPrimitives(Instance);
+		}
+		Instance.CollisionId = FGuid(0, 0, 0, 0);
 		return;
 	}
 
@@ -91,9 +119,24 @@ void UVCollisionPresenter::RebuildItem(const FGuid& ItemId)
 		return;
 	}
 
+	if (Instance.CollisionId == ColId && HasAnyPrimitives(Instance))
+	{
+		// Already built for this collision id; only update transform.
+		return;
+	}
+
 	// Full rebuild approach: destroy and recreate all primitive components.
 	DestroyPrimitives(Instance);
 	Instance.CollisionId = ColId;
+
+	UE_LOG(LogTemp, Log,
+		TEXT("CollisionPresenter: Building collision for ItemId=%s CollisionId=%s (Boxes=%d Spheres=%d Capsules=%d Convexes=%d)"),
+		*ItemId.ToString(),
+		*ColId.ToString(),
+		Def->boxes.Num(),
+		Def->spheres.Num(),
+		Def->capsules.Num(),
+		Def->convexes.Num());
 
 	// Boxes
 	for (int32 i = 0; i < Def->boxes.Num(); ++i)
@@ -134,7 +177,23 @@ void UVCollisionPresenter::RebuildItem(const FGuid& ItemId)
 		Instance.CapsuleComponents.Add(Capsule);
 	}
 
-	// Convexes are intentionally ignored in this patch to avoid introducing ProceduralMeshComponent dependency.
+	// Convexes
+	for (int32 i = 0; i < Def->convexes.Num(); ++i)
+	{
+		const FVMConvexCollision& C = Def->convexes[i];
+		if (C.vertices.Num() < 4)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("CollisionPresenter: Skipping convex with insufficient vertices for ItemId=%s"), *ItemId.ToString());
+			continue;
+		}
+
+		UProceduralMeshComponent* Convex = CreateConvex(ItemRoot, *FString::Printf(TEXT("VW_Convex_%d"), i), C.vertices);
+		if (!Convex)
+		{
+			continue;
+		}
+		Instance.ConvexComponents.Add(Convex);
+	}
 }
 
 void UVCollisionPresenter::DestroyPrimitives(FVCollisionInstance& Instance)
@@ -151,24 +210,35 @@ void UVCollisionPresenter::DestroyPrimitives(FVCollisionInstance& Instance)
 	{
 		if (C) C->DestroyComponent();
 	}
+	for (UProceduralMeshComponent* C : Instance.ConvexComponents)
+	{
+		if (C) C->DestroyComponent();
+	}
 
 	Instance.BoxComponents.Reset();
 	Instance.SphereComponents.Reset();
 	Instance.CapsuleComponents.Reset();
+	Instance.ConvexComponents.Reset();
 }
 
 USceneComponent* UVCollisionPresenter::EnsureItemRoot(FVCollisionInstance& Instance, const FGuid& ItemId)
 {
-	if (!OwnerActor || !CollisionRoot)
+	if (!OwnerActor)
 	{
 		return nullptr;
+	}
+
+	if (!CollisionRoot)
+	{
+		CollisionRoot = OwnerActor->GetRootComponent();
 	}
 
 	if (!Instance.ItemRoot)
 	{
 		Instance.ItemRoot = NewObject<USceneComponent>(OwnerActor.Get(), *FString::Printf(TEXT("VW_CollisionItemRoot_%s"), *ItemId.ToString()));
-		Instance.ItemRoot->SetupAttachment(CollisionRoot);
+		Instance.ItemRoot->SetupAttachment(CollisionRoot ? CollisionRoot : OwnerActor->GetRootComponent());
 		Instance.ItemRoot->RegisterComponent();
+		UE_LOG(LogTemp, Log, TEXT("CollisionPresenter: Created collision root for ItemId=%s"), *ItemId.ToString());
 	}
 
 	return Instance.ItemRoot;
@@ -216,6 +286,24 @@ UCapsuleComponent* UVCollisionPresenter::CreateCapsule(USceneComponent* Parent, 
 	return Comp;
 }
 
+UProceduralMeshComponent* UVCollisionPresenter::CreateConvex(USceneComponent* Parent, const FName& Name, const TArray<FVector>& Vertices)
+{
+	if (!OwnerActor || !Parent)
+	{
+		return nullptr;
+	}
+
+	UProceduralMeshComponent* Comp = NewObject<UProceduralMeshComponent>(OwnerActor.Get(), Name);
+	Comp->SetupAttachment(Parent);
+	Comp->RegisterComponent();
+	Comp->SetVisibility(false, true);
+	Comp->bUseComplexAsSimpleCollision = false;
+	Comp->ClearCollisionConvexMeshes();
+	Comp->AddCollisionConvexMesh(Vertices);
+	ConfigureCollision(Comp);
+	return Comp;
+}
+
 void UVCollisionPresenter::ConfigureCollision(UPrimitiveComponent* Prim)
 {
 	if (!Prim)
@@ -225,6 +313,15 @@ void UVCollisionPresenter::ConfigureCollision(UPrimitiveComponent* Prim)
 
 	Prim->SetMobility(EComponentMobility::Movable);
 	Prim->SetCollisionProfileName(UCollisionProfile::BlockAll_ProfileName);
+	Prim->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	Prim->SetGenerateOverlapEvents(false);
 	Prim->PrimaryComponentTick.bCanEverTick = false;
+}
+
+bool UVCollisionPresenter::HasAnyPrimitives(const FVCollisionInstance& Instance)
+{
+	return Instance.BoxComponents.Num() > 0
+		|| Instance.SphereComponents.Num() > 0
+		|| Instance.CapsuleComponents.Num() > 0
+		|| Instance.ConvexComponents.Num() > 0;
 }

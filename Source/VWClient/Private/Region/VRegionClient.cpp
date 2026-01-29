@@ -251,9 +251,10 @@ void AVRegionClient::EnqueueDependenciesFromSpatialItems(const TArray<FVMSpatial
 
 		// Collisions now live at the spatial-item level.
 		const FGuid ColId = Item.CollisionID.Value;
-		if (ColId.IsValid() && !ReceivedCollisionIds.Contains(ColId) && !InFlightCollisionIds.Contains(ColId))
+		if (ColId.IsValid() && !ReceivedCollisionIds.Contains(ColId) && !InFlightCollisionIds.Contains(ColId) && !PendingCollisionIdSet.Contains(ColId))
 		{
 			PendingCollisionIds.Add(ColId);
+			PendingCollisionIdSet.Add(ColId);
 		}
 	}
 }
@@ -374,6 +375,7 @@ void AVRegionClient::PumpCollisionQueue()
 	{
 		Batch.Add(PendingCollisionIds[i]);
 		InFlightCollisionIds.Add(PendingCollisionIds[i]);
+		PendingCollisionIdSet.Remove(PendingCollisionIds[i]);
 	}
 	PendingCollisionIds.RemoveAt(0, Count, EAllowShrinking::No);
 	bCollisionRequestInFlight = true;
@@ -401,6 +403,10 @@ void AVRegionClient::OnCollisionsBatchReceived(const TArray<FVMCollision>& Colli
 	for (const FVMCollision& Col : Collisions)
 	{
 		// Assume collision id field is named 'id' in FVMCollision
+		if (!Col.id.IsValid())
+		{
+			continue;
+		}
 		ReceivedCollisionIds.Add(Col.id);
 		InFlightCollisionIds.Remove(Col.id);
 	}
@@ -410,4 +416,30 @@ void AVRegionClient::OnCollisionsBatchReceived(const TArray<FVMCollision>& Colli
 		CollisionPresenter->SubmitCollisionDefs(Collisions);
 	}
 	PumpCollisionQueue();
+}
+
+void AVRegionClient::OnSpatialItemRemoved(const FGuid& ItemId)
+{
+	PendingSpatialItems.RemoveAll(
+		[&ItemId](const FVMSpatialItemNet& Item)
+		{
+			return Item.ItemID.Value == ItemId;
+		});
+
+	if (MeshPresenter)
+	{
+		MeshPresenter->DestroyItem(ItemId);
+	}
+	if (LightPresenter)
+	{
+		LightPresenter->DestroyItem(ItemId);
+	}
+	if (DecalPresenter)
+	{
+		DecalPresenter->DestroyItem(ItemId);
+	}
+	if (CollisionPresenter)
+	{
+		CollisionPresenter->OnItemRemoved(ItemId);
+	}
 }

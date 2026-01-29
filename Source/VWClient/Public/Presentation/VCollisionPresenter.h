@@ -9,6 +9,7 @@ class USceneComponent;
 class UBoxComponent;
 class USphereComponent;
 class UCapsuleComponent;
+class UProceduralMeshComponent;
 
 USTRUCT()
 struct FVCollisionInstance
@@ -26,6 +27,9 @@ struct FVCollisionInstance
 
 	UPROPERTY()
 	TArray<TObjectPtr<UCapsuleComponent>> CapsuleComponents;
+
+	UPROPERTY()
+	TArray<TObjectPtr<UProceduralMeshComponent>> ConvexComponents;
 
 	UPROPERTY()
 	FGuid CollisionId;
@@ -53,6 +57,9 @@ public:
 	// Called when shared collision definitions arrive.
 	void SubmitCollisionDefs(const TArray<FVMCollision>& Collisions);
 
+	// Called when a spatial item is removed/unloaded.
+	void OnItemRemoved(const FGuid& ItemId);
+
 private:
 	UPROPERTY()
 	TObjectPtr<AActor> OwnerActor = nullptr;
@@ -62,6 +69,9 @@ private:
 
 	UPROPERTY()
 	TMap<FGuid, FVMCollision> CollisionDefsById;
+
+	UPROPERTY()
+	TSet<FGuid> LoadedCollisionIds;
 
 	UPROPERTY()
 	TMap<FGuid, FTransform> ItemWorldTransformById;
@@ -80,6 +90,8 @@ private:
 	UBoxComponent* CreateBox(USceneComponent* Parent, const FName& Name);
 	USphereComponent* CreateSphere(USceneComponent* Parent, const FName& Name);
 	UCapsuleComponent* CreateCapsule(USceneComponent* Parent, const FName& Name);
+	UProceduralMeshComponent* CreateConvex(USceneComponent* Parent, const FName& Name, const TArray<FVector>& Vertices);
 
 	static void ConfigureCollision(UPrimitiveComponent* Prim);
+	static bool HasAnyPrimitives(const FVCollisionInstance& Instance);
 };
