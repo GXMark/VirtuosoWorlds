@@ -1,9 +1,13 @@
 #include "Region/VRegionClient.h"
-#include "Presentation/VItemPresenter.h"
 #include "Presentation/VCollisionPresenter.h"
+#include "Presentation/VDecalPresenter.h"
+#include "Presentation/VLightPresenter.h"
+#include "Presentation/VMaterialPresenter.h"
+#include "Presentation/VMeshPresenter.h"
 #include "Subsystem/VAssetManager.h"
 #include "Region/VRegionClientBridge.h"
 #include "Components/SceneComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
 
@@ -50,8 +54,17 @@ void AVRegionClient::BeginPlay()
 
 	AssetManager = GetWorld()->GetSubsystem<UVAssetManager>();
 
-	ItemPresenter = NewObject<UVItemPresenter>(this);
-	ItemPresenter->Initialize(this, PresentationRoot, AssetManager);
+	MeshPresenter = NewObject<UVMeshPresenter>(this);
+	MeshPresenter->Initialize(this, PresentationRoot, AssetManager);
+
+	MaterialPresenter = NewObject<UVMaterialPresenter>(this);
+	MaterialPresenter->Initialize(AssetManager);
+
+	LightPresenter = NewObject<UVLightPresenter>(this);
+	LightPresenter->Initialize(this, PresentationRoot);
+
+	DecalPresenter = NewObject<UVDecalPresenter>(this);
+	DecalPresenter->Initialize(this, PresentationRoot, AssetManager);
 
 	CollisionPresenter = NewObject<UVCollisionPresenter>(this);
 	CollisionPresenter->Initialize(this, CollisionRoot);
@@ -147,11 +160,45 @@ void AVRegionClient::Tick(float DeltaSeconds)
 
 void AVRegionClient::PresentSpatialItemsBatch(const TArray<FVMSpatialItemNet>& Items) const
 {
-	if (!ItemPresenter)
+	for (const FVMSpatialItemNet& Item : Items)
 	{
-		return;
+		const FGuid ItemId = Item.ItemID.Value;
+		const FTransform ItemXf = ToTransform(Item.Transform);
+
+		switch (Item.PayloadType)
+		{
+		case ESpatialItemType::Mesh:
+		{
+			UStaticMeshComponent* MeshComp = MeshPresenter
+				? MeshPresenter->PresentMeshItem(
+				ItemId,
+				Item.MeshPayload,
+				ItemXf,
+				Item.ParentID.Value)
+				: nullptr;
+
+			if (MeshComp && MaterialPresenter)
+			{
+				MaterialPresenter->ApplyMaterialsAsync(ItemId, MeshComp, Item.MeshPayload.material_ids);
+			}
+			break;
+		}
+		case ESpatialItemType::PointLight:
+			if (LightPresenter)
+			{
+				LightPresenter->PresentPointLightItem(ItemId, Item.PointLightPayload, ItemXf);
+			}
+			break;
+		case ESpatialItemType::SpotLight:
+			if (LightPresenter)
+			{
+				LightPresenter->PresentSpotLightItem(ItemId, Item.SpotLightPayload, ItemXf);
+			}
+			break;
+		default:
+			break;
+		}
 	}
-	ItemPresenter->PresentSpatialItemsBatch(Items);
 }
 
 void AVRegionClient::OnSpatialBatchReceived(const TArray<FVMSpatialItemNet>& Items, bool bHasMore)
