@@ -1,0 +1,44 @@
+{
+	"RemapUnityFiles": 
+	{
+		"Module.VW_Creators_Plugin.cpp.obj": [
+			"MPActor.gen.cpp.obj",
+			"MPAssetRef.gen.cpp.obj",
+			"MPBounds.gen.cpp.obj",
+			"MPBoxCollision.gen.cpp.obj",
+			"MPCapsuleCollision.gen.cpp.obj",
+			"MPCollision.gen.cpp.obj",
+			"MPComponent.gen.cpp.obj",
+			"MPConvexCollision.gen.cpp.obj",
+			"MPDecalComponent.gen.cpp.obj",
+			"MPLinearColor.gen.cpp.obj",
+			"MPMaterial.gen.cpp.obj",
+			"MPMeshComponent.gen.cpp.obj",
+			"MPPackage.gen.cpp.obj",
+			"MPPointLightComponent.gen.cpp.obj",
+			"MPScalar.gen.cpp.obj",
+			"MPSphereCollision.gen.cpp.obj",
+			"MPSpotLightComponent.gen.cpp.obj",
+			"MPTexture.gen.cpp.obj",
+			"MPTransform.gen.cpp.obj",
+			"VWPluginConfig.gen.cpp.obj",
+			"VW_Creators_Plugin.init.gen.cpp.obj",
+			"VW_Creators_PluginBPLibrary.gen.cpp.obj",
+			"PerModuleInline.gen.cpp.obj",
+			"CacheHelper.cpp.obj",
+			"CollisionHelper.cpp.obj",
+			"LightHelper.cpp.obj",
+			"MaterialHelper.cpp.obj",
+			"MeshHelper.cpp.obj",
+			"StatsHelper.cpp.obj",
+			"ArchiveUtility.cpp.obj",
+			"CrunchUtility.cpp.obj",
+			"JsonUtility.cpp.obj",
+			"PAKUtility.cpp.obj",
+			"StringUtility.cpp.obj",
+			"VW_Creators_Plugin.cpp.obj",
+			"VW_Creators_PluginBPLibrary.cpp.obj",
+			"MPComponent.cpp.obj"
+		]
+	}
+}

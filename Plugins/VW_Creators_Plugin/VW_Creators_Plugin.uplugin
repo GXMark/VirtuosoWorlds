@@ -1,0 +1,25 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "VW_Creators_Plugin",
+	"Description": "Virtuoso Worlds Creators Plugin",
+	"Category": "Other",
+	"CreatedBy": "VGS",
+	"CreatedByURL": "",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"CanContainContent": true,
+	"IsBetaVersion": false,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "VW_Creators_Plugin",
+			"Type": "Editor",
+			"LoadingPhase": "Default"
+		}
+	],
+	"EnabledByDefault": true
+}

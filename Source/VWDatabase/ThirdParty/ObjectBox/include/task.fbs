@@ -1,0 +1,6 @@
+table Task {
+ id: ulong;
+ title: string;
+ completed: bool;
+}
+root_type Task;

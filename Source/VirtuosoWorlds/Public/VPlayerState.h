@@ -1,0 +1,23 @@
+﻿#pragma once
+#include "CoreMinimal.h"
+#include "GameFramework/PlayerState.h"
+#include "Net/UnrealNetwork.h"
+#include "VPlayerState.generated.h"
+
+UCLASS()
+class AVPlayerState : public APlayerState
+{
+	GENERATED_BODY()
+public:
+	AVPlayerState();
+
+	UPROPERTY(Replicated)
+	FString UserID;
+
+protected:
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override
+	{
+		Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+		DOREPLIFETIME(AVPlayerState, UserID);
+	}
+};

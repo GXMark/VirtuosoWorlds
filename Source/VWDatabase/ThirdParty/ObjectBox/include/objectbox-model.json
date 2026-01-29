@@ -1,0 +1,63 @@
+{
+  "_note1": "KEEP THIS FILE! Check it into a version control system (VCS) like git.",
+  "_note2": "ObjectBox manages crucial IDs for your object model. See docs for details.",
+  "_note3": "If you have VCS merge conflicts, you must resolve them according to ObjectBox docs.",
+  "entities": [
+    {
+      "id": "1:6865757893027193611",
+      "lastPropertyId": "3:4351310699428898952",
+      "name": "Actor",
+      "properties": [
+        {
+          "id": "1:4946355011006032055",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:4405687304700790457",
+          "name": "key",
+          "type": 9
+        },
+        {
+          "id": "3:4351310699428898952",
+          "name": "value",
+          "type": 9
+        }
+      ]
+    },
+    {
+      "id": "2:7251852562053435056",
+      "lastPropertyId": "3:8588508138797030667",
+      "name": "Material",
+      "properties": [
+        {
+          "id": "1:3028894648025432183",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:1283969649310006975",
+          "name": "key",
+          "type": 9
+        },
+        {
+          "id": "3:8588508138797030667",
+          "name": "value",
+          "type": 9
+        }
+      ]
+    }
+  ],
+  "lastEntityId": "2:7251852562053435056",
+  "lastIndexId": "",
+  "lastRelationId": "",
+  "modelVersion": 5,
+  "modelVersionParserMinimum": 5,
+  "retiredEntityUids": [],
+  "retiredIndexUids": [],
+  "retiredPropertyUids": [],
+  "retiredRelationUids": [],
+  "version": 1
+}
