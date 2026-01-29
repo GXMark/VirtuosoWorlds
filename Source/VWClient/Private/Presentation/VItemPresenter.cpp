@@ -69,7 +69,7 @@ void UVItemPresenter::SpawnOrUpdateMesh(
 	// --------------------------------------------------
 	const FGuid& MeshId = InMeshData.mesh_ref.id.Value;
 	UE_LOG(LogTemp, Log,
-		TEXT("ChunkPresenter: ItemId=%s ParentId=%s Requested MeshId=%s"),
+		TEXT("ItemPresenter: ItemId=%s ParentId=%s Requested MeshId=%s"),
 		*InItemId.ToString(),
 		InParentId.IsValid() ? *InParentId.ToString() : TEXT("<None>"),
 		MeshId.IsValid() ? *MeshId.ToString() : TEXT("<None>") );
@@ -112,7 +112,7 @@ void UVItemPresenter::SpawnOrUpdateMesh(
 			if (!LoadedMesh)
 			{
 				UE_LOG(LogTemp, Warning,
-				       TEXT("ChunkPresenter: Mesh load FAILED (null). ItemId=%s DesiredMeshId=%s"),
+				       TEXT("ItemPresenter: Mesh load FAILED (null). ItemId=%s DesiredMeshId=%s"),
 				       *InItemId.ToString(), *DesiredMeshId.ToString());
 
 				return;
