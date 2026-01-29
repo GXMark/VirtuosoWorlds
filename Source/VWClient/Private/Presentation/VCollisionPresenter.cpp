@@ -13,7 +13,12 @@ void UVCollisionPresenter::Initialize(AActor* InOwner, USceneComponent* InCollis
 	CollisionRoot = InCollisionRoot ? InCollisionRoot : (InOwner ? InOwner->GetRootComponent() : nullptr);
 }
 
-void UVCollisionPresenter::OnItemUpsert(const FGuid& ItemId, const FTransform& WorldTransform, const FGuid& CollisionId)
+void UVCollisionPresenter::SetOnCollisionRootReady(FOnCollisionRootReady InDelegate)
+{
+	OnCollisionRootReady = MoveTemp(InDelegate);
+}
+
+void UVCollisionPresenter::PresentCollision(const FGuid& ItemId, const FTransform& WorldTransform, const FGuid& CollisionId)
 {
 	if (!OwnerActor || !CollisionRoot)
 	{
@@ -64,6 +69,10 @@ void UVCollisionPresenter::OnItemRemoved(const FGuid& ItemId)
 	FVCollisionInstance* Instance = InstancesByItemId.Find(ItemId);
 	if (Instance)
 	{
+		if (Instance->ItemRoot)
+		{
+			Instance->ItemRoot->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		}
 		DestroyPrimitives(*Instance);
 		if (Instance->ItemRoot)
 		{
@@ -235,11 +244,15 @@ USceneComponent* UVCollisionPresenter::EnsureItemRoot(FVCollisionInstance& Insta
 
 	if (!Instance.ItemRoot)
 	{
-		Instance.ItemRoot = NewObject<USceneComponent>(OwnerActor.Get(), *FString::Printf(TEXT("VW_CollisionItemRoot_%s"), *ItemId.ToString()));
-		Instance.ItemRoot->SetupAttachment(CollisionRoot ? CollisionRoot.Get() : OwnerActor->GetRootComponent());
-		Instance.ItemRoot->RegisterComponent();
-		UE_LOG(LogTemp, Log, TEXT("CollisionPresenter: Created collision root for ItemId=%s"), *ItemId.ToString());
+	Instance.ItemRoot = NewObject<USceneComponent>(OwnerActor.Get(), *FString::Printf(TEXT("VW_CollisionItemRoot_%s"), *ItemId.ToString()));
+	Instance.ItemRoot->SetupAttachment(CollisionRoot ? CollisionRoot.Get() : OwnerActor->GetRootComponent());
+	Instance.ItemRoot->RegisterComponent();
+	UE_LOG(LogTemp, Log, TEXT("CollisionPresenter: Created collision root for ItemId=%s"), *ItemId.ToString());
+	if (OnCollisionRootReady.IsBound())
+	{
+		OnCollisionRootReady.Execute(ItemId, Instance.ItemRoot);
 	}
+}
 
 	return Instance.ItemRoot;
 }
@@ -316,6 +329,15 @@ void UVCollisionPresenter::ConfigureCollision(UPrimitiveComponent* Prim)
 	Prim->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	Prim->SetGenerateOverlapEvents(false);
 	Prim->PrimaryComponentTick.bCanEverTick = false;
+}
+
+USceneComponent* UVCollisionPresenter::FindCollisionRoot(const FGuid& ItemId) const
+{
+	if (const FVCollisionInstance* Instance = InstancesByItemId.Find(ItemId))
+	{
+		return Instance->ItemRoot;
+	}
+	return nullptr;
 }
 
 bool UVCollisionPresenter::HasAnyPrimitives(const FVCollisionInstance& Instance)

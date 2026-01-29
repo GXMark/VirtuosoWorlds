@@ -14,7 +14,10 @@ class VWCLIENT_API UVMeshPresenter : public UObject
 	GENERATED_BODY()
 
 public:
+	DECLARE_DELEGATE_TwoParams(FOnMeshComponentReady, const FGuid& /*ItemId*/, UStaticMeshComponent* /*Component*/);
+
 	void Initialize(AActor* InOwner, USceneComponent* InPresentationRoot, UVAssetManager* InAssetManager);
+	void SetOnMeshComponentReady(FOnMeshComponentReady InDelegate);
 	UStaticMeshComponent* PresentMeshItem(
 		const FGuid& InItemId,
 		const FVMMeshComponentNet& InMeshData,
@@ -32,4 +35,6 @@ private:
 
 	TMap<FGuid, TObjectPtr<UStaticMeshComponent>> SpawnedComponents;
 	TMap<FGuid, FGuid> RequestedMeshByItemId;
+
+	FOnMeshComponentReady OnMeshComponentReady;
 };

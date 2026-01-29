@@ -6,7 +6,7 @@
 #include "VDecalPresenter.generated.h"
 
 class UDecalComponent;
-class UVAssetManager;
+class UMaterialInterface;
 
 UCLASS()
 class VWCLIENT_API UVDecalPresenter : public UObject
@@ -14,12 +14,15 @@ class VWCLIENT_API UVDecalPresenter : public UObject
 	GENERATED_BODY()
 
 public:
-	void Initialize(AActor* InOwner, USceneComponent* InPresentationRoot, UVAssetManager* InAssetManager);
+	void Initialize(AActor* InOwner, USceneComponent* InPresentationRoot);
 
 	void PresentDecalItem(
 		const FGuid& InItemId,
 		const FVMDecalComponentNet& InDecalData,
-		const FTransform& InWorldTransform);
+		const FTransform& InWorldTransform,
+		UMaterialInterface* InMaterial);
+
+	UDecalComponent* FindDecalComponent(const FGuid& InItemId) const;
 
 	void DestroyItem(const FGuid& InItemId);
 
@@ -27,9 +30,5 @@ private:
 	TWeakObjectPtr<AActor> PresentationOwner;
 	TWeakObjectPtr<USceneComponent> PresentationRoot;
 
-	UPROPERTY()
-	TObjectPtr<UVAssetManager> AssetManager;
-
 	TMap<FGuid, TObjectPtr<UDecalComponent>> SpawnedComponents;
-	TMap<FGuid, FGuid> RequestedMaterialsByItemId;
 };
