@@ -54,4 +54,13 @@ private:
 	TMap<TWeakObjectPtr<APlayerController>, FSpatialStreamState> SpatialStreams;
 
 	void EnsureSpatialState(APlayerController* PC);
+	FVMTransformNet MakeNetTransform(const FVMTransform& In) const;
+	FVMMeshComponentNet MakeMeshNet(const FVMMeshComponent& In) const;
+	FVMPointLightComponentNet MakePointLightNet(const FVMPointLightComponent& In) const;
+	FVMSpotLightComponentNet MakeSpotLightNet(const FVMSpotLightComponent& In) const;
+	FVMDecalComponentNet MakeDecalNet(const FVMDecalComponent& In) const;
+	void AddMeshSpatialItem(const FVMActor& Actor, FSpatialStreamState& State);
+	void AddPointLightSpatialItem(const FVMActor& Actor, FSpatialStreamState& State);
+	void AddSpotLightSpatialItem(const FVMActor& Actor, FSpatialStreamState& State);
+	void AddDecalSpatialItem(const FVMActor& Actor, FSpatialStreamState& State);
 };
