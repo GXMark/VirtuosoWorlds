@@ -1,7 +1,10 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
-#include "VMComponent.h"
+#include "VMDecalComponent.h"
+#include "VMMeshComponent.h"
+#include "VMPointLightComponent.h"
+#include "VMSpotLightComponent.h"
 #include "VMTransform.h"
 #include "VMActor.generated.h"
 
