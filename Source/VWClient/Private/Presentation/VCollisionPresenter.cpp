@@ -236,7 +236,8 @@ USceneComponent* UVCollisionPresenter::EnsureItemRoot(FVCollisionInstance& Insta
 	if (!Instance.ItemRoot)
 	{
 		Instance.ItemRoot = NewObject<USceneComponent>(OwnerActor.Get(), *FString::Printf(TEXT("VW_CollisionItemRoot_%s"), *ItemId.ToString()));
-		Instance.ItemRoot->SetupAttachment(CollisionRoot ? CollisionRoot : OwnerActor->GetRootComponent());
+		USceneComponent* RootComponent = CollisionRoot ? CollisionRoot.Get() : OwnerActor->GetRootComponent();
+		Instance.ItemRoot->SetupAttachment(RootComponent);
 		Instance.ItemRoot->RegisterComponent();
 		UE_LOG(LogTemp, Log, TEXT("CollisionPresenter: Created collision root for ItemId=%s"), *ItemId.ToString());
 	}
