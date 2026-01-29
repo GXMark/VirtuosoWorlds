@@ -7,6 +7,7 @@
 #include "Model/Network/VMSpatialItemNet.h"
 #include "Model/Package/VMMaterial.h"
 #include "Model/Package/VMCollision.h"
+#include "Region/VContentResolver.h"
 #include "Region/VRegionClientBridge.h"
 #include "VRegionClient.generated.h"
 
@@ -17,6 +18,7 @@ class UVMaterialPresenter;
 class UVMeshPresenter;
 class UVAssetManager;
 class UVCollisionPresenter;
+class UVContentResolver;
 
 UCLASS()
 class VWCLIENT_API AVRegionClient : public AActor
@@ -25,9 +27,6 @@ class VWCLIENT_API AVRegionClient : public AActor
 
 public:
 	AVRegionClient();
-
-	// Called by the local player controller when spatial items are received.
-	void PresentSpatialItemsBatch(const TArray<FVMSpatialItemNet>& Items);
 
 	// Called by the local player controller to update streaming state.
 	void OnSpatialBatchReceived(const TArray<FVMSpatialItemNet>& Items, bool bHasMore);
@@ -65,6 +64,9 @@ private:
 	TObjectPtr<UVCollisionPresenter> CollisionPresenter;
 
 	UPROPERTY()
+	TObjectPtr<UVContentResolver> ContentResolver;
+
+	UPROPERTY()
 	TObjectPtr<URegionClientBridge> RegionBridge;
 
 	// Cached asset manager pointer (world subsystem)
@@ -84,33 +86,8 @@ private:
 	FVector PendingSpatialOrigin = FVector::ZeroVector;
 	int32 MaxSpatialItemsPerRequest = 64;
 
-	// --- Client material batching state ---
-	bool bMaterialRequestInFlight = false;
-	TSet<FGuid> ReceivedMaterialIds;
-	TSet<FGuid> InFlightMaterialIds;
-	TArray<FGuid> PendingMaterialIds;
-	int32 MaxMaterialItemLimit = 64;
-
-	// --- Client collision batching state ---
-	bool bCollisionRequestInFlight = false;
-	TSet<FGuid> ReceivedCollisionIds;
-	TSet<FGuid> InFlightCollisionIds;
-	TSet<FGuid> PendingCollisionIdSet;
-	TArray<FGuid> PendingCollisionIds;
-	int32 MaxCollisionItemLimit = 64;
-
 	// Helper to issue the next spatial request via the owning controller interface.
 	void RequestNextSpatialBatch();
-	void PumpSpatialResolutionQueue();
-	void PumpMaterialQueue();
-	void PumpCollisionQueue();
-	void ResolveSpatialItem(const FVMSpatialItemNet& Item);
-	void EnqueueDependenciesFromSpatialItems(const TArray<FVMSpatialItemNet>& Items);
-
-	UPROPERTY()
-	TArray<FVMSpatialItemNet> PendingSpatialItems;
-
-	int32 MaxSpatialItemsToResolvePerTick = 32;
 
 public:
 	// Called by the local player controller when a material batch response arrives.

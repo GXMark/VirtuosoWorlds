@@ -8,6 +8,7 @@
 
 class UPointLightComponent;
 class USpotLightComponent;
+class USceneComponent;
 
 UCLASS()
 class VWCLIENT_API UVLightPresenter : public UObject
@@ -26,6 +27,8 @@ public:
 		const FGuid& InItemId,
 		const FVMSpotLightComponentNet& InLightData,
 		const FTransform& InWorldTransform);
+
+	USceneComponent* FindLightComponent(const FGuid& InItemId) const;
 
 	void DestroyItem(const FGuid& InItemId);
 

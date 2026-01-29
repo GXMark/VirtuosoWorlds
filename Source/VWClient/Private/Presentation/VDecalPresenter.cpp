@@ -1,21 +1,21 @@
 #include "Presentation/VDecalPresenter.h"
 
 #include "Components/DecalComponent.h"
-#include "Subsystem/VAssetManager.h"
+#include "Materials/MaterialInterface.h"
 
-void UVDecalPresenter::Initialize(AActor* InOwner, USceneComponent* InPresentationRoot, UVAssetManager* InAssetManager)
+void UVDecalPresenter::Initialize(AActor* InOwner, USceneComponent* InPresentationRoot)
 {
 	PresentationOwner = InOwner;
 	PresentationRoot = InPresentationRoot;
-	AssetManager = InAssetManager;
 }
 
 void UVDecalPresenter::PresentDecalItem(
 	const FGuid& InItemId,
 	const FVMDecalComponentNet& InDecalData,
-	const FTransform& InWorldTransform)
+	const FTransform& InWorldTransform,
+	UMaterialInterface* InMaterial)
 {
-	if (!PresentationOwner.IsValid() || !PresentationRoot.IsValid() || !AssetManager)
+	if (!PresentationOwner.IsValid() || !PresentationRoot.IsValid())
 	{
 		return;
 	}
@@ -42,43 +42,17 @@ void UVDecalPresenter::PresentDecalItem(
 		InDecalData.fade_out_duration,
 		InDecalData.destroy_after_fade_out);
 
-	const FGuid MaterialId = InDecalData.material_id.Value;
-	if (!MaterialId.IsValid())
+	if (!InMaterial)
 	{
 		return;
 	}
 
-	if (const FGuid* CurrentDesired = RequestedMaterialsByItemId.Find(InItemId))
-	{
-		if (*CurrentDesired == MaterialId)
-		{
-			return;
-		}
-	}
+	DecalComp->SetDecalMaterial(InMaterial);
+}
 
-	RequestedMaterialsByItemId.Add(InItemId, MaterialId);
-
-	AssetManager->RequestMaterialInstanceAsync(
-		MaterialId,
-		FVOnMaterialInstanceLoaded::CreateLambda(
-			[this, InItemId, MaterialId](UMaterialInstanceDynamic* LoadedMID)
-			{
-				if (!LoadedMID)
-				{
-					return;
-				}
-
-				const FGuid* CurrentDesired = RequestedMaterialsByItemId.Find(InItemId);
-				if (!CurrentDesired || *CurrentDesired != MaterialId)
-				{
-					return;
-				}
-
-				if (UDecalComponent* Decal = SpawnedComponents.FindRef(InItemId))
-				{
-					Decal->SetDecalMaterial(LoadedMID);
-				}
-			}));
+UDecalComponent* UVDecalPresenter::FindDecalComponent(const FGuid& InItemId) const
+{
+	return SpawnedComponents.FindRef(InItemId);
 }
 
 void UVDecalPresenter::DestroyItem(const FGuid& InItemId)
@@ -88,5 +62,4 @@ void UVDecalPresenter::DestroyItem(const FGuid& InItemId)
 		Comp->DestroyComponent();
 	}
 	SpawnedComponents.Remove(InItemId);
-	RequestedMaterialsByItemId.Remove(InItemId);
 }

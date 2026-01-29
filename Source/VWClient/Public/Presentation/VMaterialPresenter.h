@@ -2,11 +2,10 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
-#include "Model/Network/VMGuidNet.h"
 #include "VMaterialPresenter.generated.h"
 
 class UStaticMeshComponent;
-class UVAssetManager;
+class UMaterialInterface;
 
 UCLASS()
 class VWCLIENT_API UVMaterialPresenter : public UObject
@@ -14,17 +13,14 @@ class VWCLIENT_API UVMaterialPresenter : public UObject
 	GENERATED_BODY()
 
 public:
-	void Initialize(UVAssetManager* InAssetManager);
-	void ApplyMaterialsAsync(
+	void Initialize();
+	void ApplyMaterials(
 		const FGuid& InItemId,
 		UStaticMeshComponent* MeshComp,
-		const TArray<FVMGuidNet>& InMaterialIds);
+		const TArray<UMaterialInterface*>& InMaterials);
 	void ForgetItem(const FGuid& InItemId);
 
 private:
-	UPROPERTY()
-	TObjectPtr<UVAssetManager> AssetManager;
-
 	TMap<FGuid, TWeakObjectPtr<UStaticMeshComponent>> MeshByItemId;
-	TMap<FGuid, TArray<FGuid>> RequestedMaterialsByItemId;
+	TMap<FGuid, TArray<UMaterialInterface*>> AppliedMaterialsByItemId;
 };

@@ -5,20 +5,11 @@
 #include "Presentation/VMaterialPresenter.h"
 #include "Presentation/VMeshPresenter.h"
 #include "Subsystem/VAssetManager.h"
+#include "Region/VContentResolver.h"
 #include "Region/VRegionClientBridge.h"
 #include "Components/SceneComponent.h"
-#include "Components/StaticMeshComponent.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
-
-static FORCEINLINE FTransform ToTransform(const FVMTransformNet& Net)
-{
-	FTransform Xf;
-	Xf.SetLocation(FVector(Net.Location));
-	Xf.SetRotation(Net.Rotation.ToQuat());
-	Xf.SetScale3D(Net.bHasScale ? FVector(Net.Scale) : FVector(1.f, 1.f, 1.f));
-	return Xf;
-}
 
 AVRegionClient::AVRegionClient()
 {
@@ -58,13 +49,13 @@ void AVRegionClient::BeginPlay()
 	MeshPresenter->Initialize(this, PresentationRoot, AssetManager);
 
 	MaterialPresenter = NewObject<UVMaterialPresenter>(this);
-	MaterialPresenter->Initialize(AssetManager);
+	MaterialPresenter->Initialize();
 
 	LightPresenter = NewObject<UVLightPresenter>(this);
 	LightPresenter->Initialize(this, PresentationRoot);
 
 	DecalPresenter = NewObject<UVDecalPresenter>(this);
-	DecalPresenter->Initialize(this, PresentationRoot, AssetManager);
+	DecalPresenter->Initialize(this, PresentationRoot);
 
 	CollisionPresenter = NewObject<UVCollisionPresenter>(this);
 	CollisionPresenter->Initialize(this, CollisionRoot);
@@ -75,6 +66,17 @@ void AVRegionClient::BeginPlay()
 		RegionBridge = NewObject<URegionClientBridge>(this, TEXT("RegionBridge"));
 		RegionBridge->Initialize(PC);
 	}
+
+	ContentResolver = NewObject<UVContentResolver>(this);
+	ContentResolver->Initialize(
+		this,
+		RegionBridge,
+		MeshPresenter,
+		MaterialPresenter,
+		LightPresenter,
+		DecalPresenter,
+		CollisionPresenter,
+		AssetManager);
 
 	// Start streaming on the local client.
 	bSpatialStreamActive = true;
@@ -137,39 +139,28 @@ void AVRegionClient::Tick(float DeltaSeconds)
 	// If a request is in-flight, wait for the response before doing more.
 	if (bSpatialRequestInFlight)
 	{
-		// Still allow material/collision pumps to progress while spatial is in-flight.
-		PumpSpatialResolutionQueue();
-		PumpMaterialQueue();
-		PumpCollisionQueue();
+		if (ContentResolver)
+		{
+			ContentResolver->Tick(DeltaSeconds);
+		}
 		return;
 	}
 
 	// If the server told us there is no more data for the current stream, stop unless we recenter.
 	if (!bSpatialHasMore)
 	{
-		// Spatial may be complete, but material/collision queues may still have work.
-		PumpSpatialResolutionQueue();
-		PumpMaterialQueue();
-		PumpCollisionQueue();
+		if (ContentResolver)
+		{
+			ContentResolver->Tick(DeltaSeconds);
+		}
 		return;
 	}
 
 	RequestNextSpatialBatch();
-	// Also pump dependent queues each tick.
-	PumpSpatialResolutionQueue();
-	PumpMaterialQueue();
-	PumpCollisionQueue();
-}
-
-void AVRegionClient::PresentSpatialItemsBatch(const TArray<FVMSpatialItemNet>& Items)
-{
-	if (Items.Num() <= 0)
+	if (ContentResolver)
 	{
-		return;
+		ContentResolver->Tick(DeltaSeconds);
 	}
-
-	PendingSpatialItems.Append(Items);
-	PumpSpatialResolutionQueue();
 }
 
 void AVRegionClient::OnSpatialBatchReceived(const TArray<FVMSpatialItemNet>& Items, bool bHasMore)
@@ -189,11 +180,11 @@ void AVRegionClient::OnSpatialBatchReceived(const TArray<FVMSpatialItemNet>& Ite
 		bSpatialHasMore = true;
 	}
 
-	PresentSpatialItemsBatch(Items);
-	EnqueueDependenciesFromSpatialItems(Items);
-	PumpSpatialResolutionQueue();
-	PumpMaterialQueue();
-	PumpCollisionQueue();
+	if (ContentResolver)
+	{
+		ContentResolver->OnSpatialBatchReceived(Items);
+		ContentResolver->Tick(0.f);
+	}
 }
 
 void AVRegionClient::SetSpatialStreamingEnabled(bool bEnabled)
@@ -223,223 +214,28 @@ void AVRegionClient::RequestNextSpatialBatch()
 	RegionBridge->RequestSpatialItems(SpatialOrigin, MaxSpatialItemsPerRequest);
 }
 
-void AVRegionClient::EnqueueDependenciesFromSpatialItems(const TArray<FVMSpatialItemNet>& Items)
-{
-	for (const FVMSpatialItemNet& Item : Items)
-	{
-		// Materials are only required for mesh payloads.
-		if (Item.PayloadType == ESpatialItemType::Mesh)
-		{
-			for (const FVMGuidNet& MatNet : Item.MeshPayload.material_ids)
-			{
-				const FGuid MatId = MatNet.Value;
-				if (!MatId.IsValid() || ReceivedMaterialIds.Contains(MatId) || InFlightMaterialIds.Contains(MatId))
-				{
-					continue;
-				}
-				PendingMaterialIds.Add(MatId);
-			}
-		}
-		else if (Item.PayloadType == ESpatialItemType::Decal)
-		{
-			const FGuid MatId = Item.DecalPayload.material_id.Value;
-			if (MatId.IsValid() && !ReceivedMaterialIds.Contains(MatId) && !InFlightMaterialIds.Contains(MatId))
-			{
-				PendingMaterialIds.Add(MatId);
-			}
-		}
-
-		// Collisions now live at the spatial-item level.
-		const FGuid ColId = Item.CollisionID.Value;
-		if (ColId.IsValid() && !ReceivedCollisionIds.Contains(ColId) && !InFlightCollisionIds.Contains(ColId) && !PendingCollisionIdSet.Contains(ColId))
-		{
-			PendingCollisionIds.Add(ColId);
-			PendingCollisionIdSet.Add(ColId);
-		}
-	}
-}
-
-void AVRegionClient::PumpSpatialResolutionQueue()
-{
-	if (PendingSpatialItems.Num() <= 0)
-	{
-		return;
-	}
-
-	const int32 Count = FMath::Min(MaxSpatialItemsToResolvePerTick, PendingSpatialItems.Num());
-	for (int32 Index = 0; Index < Count; ++Index)
-	{
-		ResolveSpatialItem(PendingSpatialItems[Index]);
-	}
-	PendingSpatialItems.RemoveAt(0, Count, EAllowShrinking::No);
-}
-
-void AVRegionClient::ResolveSpatialItem(const FVMSpatialItemNet& Item)
-{
-	const FGuid ItemId = Item.ItemID.Value;
-	const FTransform ItemXf = ToTransform(Item.Transform);
-
-	if (CollisionPresenter)
-	{
-		CollisionPresenter->OnItemUpsert(ItemId, ItemXf, Item.CollisionID.Value);
-	}
-
-	switch (Item.PayloadType)
-	{
-	case ESpatialItemType::Mesh:
-	{
-		UStaticMeshComponent* MeshComp = MeshPresenter
-			? MeshPresenter->PresentMeshItem(
-				ItemId,
-				Item.MeshPayload,
-				ItemXf,
-				Item.ParentID.Value)
-			: nullptr;
-
-		if (MeshComp && MaterialPresenter)
-		{
-			MaterialPresenter->ApplyMaterialsAsync(ItemId, MeshComp, Item.MeshPayload.material_ids);
-		}
-		break;
-	}
-	case ESpatialItemType::PointLight:
-		if (LightPresenter)
-		{
-			LightPresenter->PresentPointLightItem(ItemId, Item.PointLightPayload, ItemXf);
-		}
-		break;
-	case ESpatialItemType::SpotLight:
-		if (LightPresenter)
-		{
-			LightPresenter->PresentSpotLightItem(ItemId, Item.SpotLightPayload, ItemXf);
-		}
-		break;
-	case ESpatialItemType::Decal:
-		if (DecalPresenter)
-		{
-			DecalPresenter->PresentDecalItem(ItemId, Item.DecalPayload, ItemXf);
-		}
-		break;
-	default:
-		break;
-	}
-}
-
-void AVRegionClient::PumpMaterialQueue()
-{
-	if (bMaterialRequestInFlight)
-	{
-		return;
-	}
-	if (!RegionBridge || !RegionBridge->IsValidBridge())
-	{
-		return;
-	}
-	if (PendingMaterialIds.Num() <= 0)
-	{
-		return;
-	}
-
-	const int32 Count = FMath::Min(MaxMaterialItemLimit, PendingMaterialIds.Num());
-	TArray<FGuid> Batch;
-	Batch.Reserve(Count);
-	for (int32 i = 0; i < Count; ++i)
-	{
-		Batch.Add(PendingMaterialIds[i]);
-		InFlightMaterialIds.Add(PendingMaterialIds[i]);
-	}
-	PendingMaterialIds.RemoveAt(0, Count, EAllowShrinking::No);
-	bMaterialRequestInFlight = true;
-	RegionBridge->RequestMaterialsBatch(Batch);
-}
-
-void AVRegionClient::PumpCollisionQueue()
-{
-	if (bCollisionRequestInFlight)
-	{
-		return;
-	}
-	if (!RegionBridge || !RegionBridge->IsValidBridge())
-	{
-		return;
-	}
-	if (PendingCollisionIds.Num() <= 0)
-	{
-		return;
-	}
-
-	const int32 Count = FMath::Min(MaxCollisionItemLimit, PendingCollisionIds.Num());
-	TArray<FGuid> Batch;
-	Batch.Reserve(Count);
-	for (int32 i = 0; i < Count; ++i)
-	{
-		Batch.Add(PendingCollisionIds[i]);
-		InFlightCollisionIds.Add(PendingCollisionIds[i]);
-		PendingCollisionIdSet.Remove(PendingCollisionIds[i]);
-	}
-	PendingCollisionIds.RemoveAt(0, Count, EAllowShrinking::No);
-	bCollisionRequestInFlight = true;
-	RegionBridge->RequestCollisionsBatch(Batch);
-}
-
 void AVRegionClient::OnMaterialsBatchReceived(const TArray<FVMMaterial>& Materials)
 {
-	bMaterialRequestInFlight = false;
-	if (AssetManager)
+	if (ContentResolver)
 	{
-		AssetManager->SubmitMaterialItems(Materials);
+		ContentResolver->OnMaterialsBatchReceived(Materials);
+		ContentResolver->Tick(0.f);
 	}
-	for (const FVMMaterial& Mat : Materials)
-	{
-		ReceivedMaterialIds.Add(Mat.id);
-		InFlightMaterialIds.Remove(Mat.id);
-	}
-	PumpMaterialQueue();
 }
 
 void AVRegionClient::OnCollisionsBatchReceived(const TArray<FVMCollision>& Collisions)
 {
-	bCollisionRequestInFlight = false;
-	for (const FVMCollision& Col : Collisions)
+	if (ContentResolver)
 	{
-		// Assume collision id field is named 'id' in FVMCollision
-		if (!Col.id.IsValid())
-		{
-			continue;
-		}
-		ReceivedCollisionIds.Add(Col.id);
-		InFlightCollisionIds.Remove(Col.id);
+		ContentResolver->OnCollisionsBatchReceived(Collisions);
+		ContentResolver->Tick(0.f);
 	}
-
-	if (CollisionPresenter)
-	{
-		CollisionPresenter->SubmitCollisionDefs(Collisions);
-	}
-	PumpCollisionQueue();
 }
 
 void AVRegionClient::OnSpatialItemRemoved(const FGuid& ItemId)
 {
-	PendingSpatialItems.RemoveAll(
-		[&ItemId](const FVMSpatialItemNet& Item)
-		{
-			return Item.ItemID.Value == ItemId;
-		});
-
-	if (MeshPresenter)
+	if (ContentResolver)
 	{
-		MeshPresenter->DestroyItem(ItemId);
-	}
-	if (LightPresenter)
-	{
-		LightPresenter->DestroyItem(ItemId);
-	}
-	if (DecalPresenter)
-	{
-		DecalPresenter->DestroyItem(ItemId);
-	}
-	if (CollisionPresenter)
-	{
-		CollisionPresenter->OnItemRemoved(ItemId);
+		ContentResolver->OnSpatialItemRemoved(ItemId);
 	}
 }

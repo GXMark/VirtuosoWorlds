@@ -49,16 +49,21 @@ class VWCLIENT_API UVCollisionPresenter : public UObject
 	GENERATED_BODY()
 
 public:
-	void Initialize(AActor* InOwner, USceneComponent* InCollisionRoot);
+	DECLARE_DELEGATE_TwoParams(FOnCollisionRootReady, const FGuid& /*ItemId*/, USceneComponent* /*Component*/);
 
-	// Called when a spatial item arrives/updates.
-	void OnItemUpsert(const FGuid& ItemId, const FTransform& WorldTransform, const FGuid& CollisionId);
+	void Initialize(AActor* InOwner, USceneComponent* InCollisionRoot);
+	void SetOnCollisionRootReady(FOnCollisionRootReady InDelegate);
+
+	// Called when a spatial item is ready for collision presentation.
+	void PresentCollision(const FGuid& ItemId, const FTransform& WorldTransform, const FGuid& CollisionId);
 
 	// Called when shared collision definitions arrive.
 	void SubmitCollisionDefs(const TArray<FVMCollision>& Collisions);
 
 	// Called when a spatial item is removed/unloaded.
 	void OnItemRemoved(const FGuid& ItemId);
+
+	USceneComponent* FindCollisionRoot(const FGuid& ItemId) const;
 
 private:
 	UPROPERTY()
@@ -94,4 +99,6 @@ private:
 
 	static void ConfigureCollision(UPrimitiveComponent* Prim);
 	static bool HasAnyPrimitives(const FVCollisionInstance& Instance);
+
+	FOnCollisionRootReady OnCollisionRootReady;
 };

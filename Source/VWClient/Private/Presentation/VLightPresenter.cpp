@@ -55,6 +55,11 @@ void UVLightPresenter::PresentSpotLightItem(
 	ApplySpotLightPayload(LightComp, InLightData);
 }
 
+USceneComponent* UVLightPresenter::FindLightComponent(const FGuid& InItemId) const
+{
+	return SpawnedComponents.FindRef(InItemId);
+}
+
 void UVLightPresenter::DestroyItem(const FGuid& InItemId)
 {
 	if (USceneComponent* Comp = SpawnedComponents.FindRef(InItemId))

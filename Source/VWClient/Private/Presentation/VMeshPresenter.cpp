@@ -12,6 +12,11 @@ void UVMeshPresenter::Initialize(AActor* InOwner, USceneComponent* InPresentatio
 	AssetManager = InAssetManager;
 }
 
+void UVMeshPresenter::SetOnMeshComponentReady(FOnMeshComponentReady InDelegate)
+{
+	OnMeshComponentReady = MoveTemp(InDelegate);
+}
+
 UStaticMeshComponent* UVMeshPresenter::PresentMeshItem(
 	const FGuid& InItemId,
 	const FVMMeshComponentNet& InMeshData,
@@ -37,6 +42,10 @@ UStaticMeshComponent* UVMeshPresenter::PresentMeshItem(
 		ExistingComp->AttachToComponent(PresentationRoot.Get(), FAttachmentTransformRules::KeepWorldTransform);
 		ExistingComp->RegisterComponent();
 		SpawnedComponents.Add(InItemId, ExistingComp);
+		if (OnMeshComponentReady.IsBound())
+		{
+			OnMeshComponentReady.Execute(InItemId, ExistingComp);
+		}
 	}
 
 	ExistingComp->SetWorldTransform(InWorldTransform);
