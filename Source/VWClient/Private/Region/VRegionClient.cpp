@@ -50,8 +50,8 @@ void AVRegionClient::BeginPlay()
 
 	AssetManager = GetWorld()->GetSubsystem<UVAssetManager>();
 
-	ChunkPresenter = NewObject<UVItemPresenter>(this);
-	ChunkPresenter->Initialize(this, PresentationRoot, AssetManager);
+	ItemPresenter = NewObject<UVItemPresenter>(this);
+	ItemPresenter->Initialize(this, PresentationRoot, AssetManager);
 
 	CollisionPresenter = NewObject<UVCollisionPresenter>(this);
 	CollisionPresenter->Initialize(this, CollisionRoot);
@@ -147,11 +147,11 @@ void AVRegionClient::Tick(float DeltaSeconds)
 
 void AVRegionClient::PresentSpatialItemsBatch(const TArray<FVMSpatialItemNet>& Items) const
 {
-	if (!ChunkPresenter)
+	if (!ItemPresenter)
 	{
 		return;
 	}
-	ChunkPresenter->PresentSpatialItemsBatch(Items);
+	ItemPresenter->PresentSpatialItemsBatch(Items);
 }
 
 void AVRegionClient::OnSpatialBatchReceived(const TArray<FVMSpatialItemNet>& Items, bool bHasMore)

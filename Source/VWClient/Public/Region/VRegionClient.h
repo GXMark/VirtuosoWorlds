@@ -47,7 +47,7 @@ private:
 	TObjectPtr<USceneComponent> CollisionRoot;
 
 	UPROPERTY()
-	TObjectPtr<UVItemPresenter> ChunkPresenter;
+	TObjectPtr<UVItemPresenter> ItemPresenter;
 
 	UPROPERTY()
 	TObjectPtr<UVCollisionPresenter> CollisionPresenter;
