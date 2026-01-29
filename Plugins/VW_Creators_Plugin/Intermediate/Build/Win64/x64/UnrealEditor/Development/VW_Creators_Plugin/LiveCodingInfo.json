@@ -26,16 +26,16 @@
 			"PerModuleInline.gen.cpp.obj",
 			"CacheHelper.cpp.obj",
 			"CollisionHelper.cpp.obj",
-			"StatsHelper.cpp.obj",
-			"ArchiveUtility.cpp.obj",
-			"CrunchUtility.cpp.obj",
-			"PAKUtility.cpp.obj",
-			"StringUtility.cpp.obj",
-			"VW_Creators_Plugin.cpp.obj",
 			"LightHelper.cpp.obj",
 			"MaterialHelper.cpp.obj",
 			"MeshHelper.cpp.obj",
+			"StatsHelper.cpp.obj",
+			"ArchiveUtility.cpp.obj",
+			"CrunchUtility.cpp.obj",
 			"JsonUtility.cpp.obj",
+			"PAKUtility.cpp.obj",
+			"StringUtility.cpp.obj",
+			"VW_Creators_Plugin.cpp.obj",
 			"VW_Creators_PluginBPLibrary.cpp.obj"
 		]
 	}
