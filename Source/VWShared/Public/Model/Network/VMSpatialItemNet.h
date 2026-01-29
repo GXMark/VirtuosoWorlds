@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "CoreMinimal.h"
+#include "Model/Network/VMDecalComponentNet.h"
 #include "Model/Network/VMMeshComponentNet.h"
 #include "Model/Network/VMPointLightComponentNet.h"
 #include "Model/Network/VMSpotLightComponentNet.h"
@@ -12,6 +13,7 @@ enum class ESpatialItemType : uint8
 	Mesh       UMETA(DisplayName="Mesh"),
 	PointLight UMETA(DisplayName="PointLight"),
 	SpotLight  UMETA(DisplayName="SpotLight"),
+	Decal      UMETA(DisplayName="Decal"),
 };
 
 USTRUCT(BlueprintType)
@@ -40,6 +42,9 @@ struct VWSHARED_API FVMSpatialItemNet
 
 	UPROPERTY()
 	FVMSpotLightComponentNet SpotLightPayload;
+
+	UPROPERTY()
+	FVMDecalComponentNet DecalPayload;
 
 	UPROPERTY()
 	FVMTransformNet Transform;
@@ -77,7 +82,7 @@ struct VWSHARED_API FVMSpatialItemNet
 		if (Ar.IsLoading())
 		{
 			// Defensive: map unknown values to Mesh (or fail)
-			if (PayloadTypeBits > static_cast<uint8>(ESpatialItemType::SpotLight))
+			if (PayloadTypeBits > static_cast<uint8>(ESpatialItemType::Decal))
 			{
 				bOutSuccess = false;
 				return false;
@@ -114,6 +119,13 @@ struct VWSHARED_API FVMSpatialItemNet
 		{
 			bool bOk = true;
 			SpotLightPayload.NetSerialize(Ar, Map, bOk);
+			bOutSuccess &= bOk;
+			break;
+		}
+		case ESpatialItemType::Decal:
+		{
+			bool bOk = true;
+			DecalPayload.NetSerialize(Ar, Map, bOk);
 			bOutSuccess &= bOk;
 			break;
 		}

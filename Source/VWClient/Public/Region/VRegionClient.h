@@ -27,7 +27,7 @@ public:
 	AVRegionClient();
 
 	// Called by the local player controller when spatial items are received.
-	void PresentSpatialItemsBatch(const TArray<FVMSpatialItemNet>& Items) const;
+	void PresentSpatialItemsBatch(const TArray<FVMSpatialItemNet>& Items);
 
 	// Called by the local player controller to update streaming state.
 	void OnSpatialBatchReceived(const TArray<FVMSpatialItemNet>& Items, bool bHasMore);
@@ -100,9 +100,16 @@ private:
 
 	// Helper to issue the next spatial request via the owning controller interface.
 	void RequestNextSpatialBatch();
+	void PumpSpatialResolutionQueue();
 	void PumpMaterialQueue();
 	void PumpCollisionQueue();
+	void ResolveSpatialItem(const FVMSpatialItemNet& Item);
 	void EnqueueDependenciesFromSpatialItems(const TArray<FVMSpatialItemNet>& Items);
+
+	UPROPERTY()
+	TArray<FVMSpatialItemNet> PendingSpatialItems;
+
+	int32 MaxSpatialItemsToResolvePerTick = 32;
 
 public:
 	// Called by the local player controller when a material batch response arrives.

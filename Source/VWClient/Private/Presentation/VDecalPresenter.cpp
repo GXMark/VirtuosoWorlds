@@ -34,6 +34,13 @@ void UVDecalPresenter::PresentDecalItem(
 		static_cast<float>(InDecalData.size.X),
 		static_cast<float>(InDecalData.size.Y),
 		static_cast<float>(InDecalData.size.Z));
+	DecalComp->SetDecalColor(InDecalData.color.color);
+	DecalComp->SetFadeScreenSize(InDecalData.fade_screen_size);
+	DecalComp->SetFadeIn(InDecalData.fade_in_start_delay, InDecalData.fade_in_duration);
+	DecalComp->SetFadeOut(
+		InDecalData.fade_out_start_delay,
+		InDecalData.fade_out_duration,
+		InDecalData.destroy_after_fade_out);
 
 	const FGuid MaterialId = InDecalData.material_id.Value;
 	if (!MaterialId.IsValid())

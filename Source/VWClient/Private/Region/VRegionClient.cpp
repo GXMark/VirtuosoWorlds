@@ -138,6 +138,7 @@ void AVRegionClient::Tick(float DeltaSeconds)
 	if (bSpatialRequestInFlight)
 	{
 		// Still allow material/collision pumps to progress while spatial is in-flight.
+		PumpSpatialResolutionQueue();
 		PumpMaterialQueue();
 		PumpCollisionQueue();
 		return;
@@ -147,6 +148,7 @@ void AVRegionClient::Tick(float DeltaSeconds)
 	if (!bSpatialHasMore)
 	{
 		// Spatial may be complete, but material/collision queues may still have work.
+		PumpSpatialResolutionQueue();
 		PumpMaterialQueue();
 		PumpCollisionQueue();
 		return;
@@ -154,51 +156,20 @@ void AVRegionClient::Tick(float DeltaSeconds)
 
 	RequestNextSpatialBatch();
 	// Also pump dependent queues each tick.
+	PumpSpatialResolutionQueue();
 	PumpMaterialQueue();
 	PumpCollisionQueue();
 }
 
-void AVRegionClient::PresentSpatialItemsBatch(const TArray<FVMSpatialItemNet>& Items) const
+void AVRegionClient::PresentSpatialItemsBatch(const TArray<FVMSpatialItemNet>& Items)
 {
-	for (const FVMSpatialItemNet& Item : Items)
+	if (Items.Num() <= 0)
 	{
-		const FGuid ItemId = Item.ItemID.Value;
-		const FTransform ItemXf = ToTransform(Item.Transform);
-
-		switch (Item.PayloadType)
-		{
-		case ESpatialItemType::Mesh:
-		{
-			UStaticMeshComponent* MeshComp = MeshPresenter
-				? MeshPresenter->PresentMeshItem(
-				ItemId,
-				Item.MeshPayload,
-				ItemXf,
-				Item.ParentID.Value)
-				: nullptr;
-
-			if (MeshComp && MaterialPresenter)
-			{
-				MaterialPresenter->ApplyMaterialsAsync(ItemId, MeshComp, Item.MeshPayload.material_ids);
-			}
-			break;
-		}
-		case ESpatialItemType::PointLight:
-			if (LightPresenter)
-			{
-				LightPresenter->PresentPointLightItem(ItemId, Item.PointLightPayload, ItemXf);
-			}
-			break;
-		case ESpatialItemType::SpotLight:
-			if (LightPresenter)
-			{
-				LightPresenter->PresentSpotLightItem(ItemId, Item.SpotLightPayload, ItemXf);
-			}
-			break;
-		default:
-			break;
-		}
+		return;
 	}
+
+	PendingSpatialItems.Append(Items);
+	PumpSpatialResolutionQueue();
 }
 
 void AVRegionClient::OnSpatialBatchReceived(const TArray<FVMSpatialItemNet>& Items, bool bHasMore)
@@ -220,6 +191,7 @@ void AVRegionClient::OnSpatialBatchReceived(const TArray<FVMSpatialItemNet>& Ite
 
 	PresentSpatialItemsBatch(Items);
 	EnqueueDependenciesFromSpatialItems(Items);
+	PumpSpatialResolutionQueue();
 	PumpMaterialQueue();
 	PumpCollisionQueue();
 }
@@ -255,15 +227,6 @@ void AVRegionClient::EnqueueDependenciesFromSpatialItems(const TArray<FVMSpatial
 {
 	for (const FVMSpatialItemNet& Item : Items)
 	{
-		const FGuid ItemId = Item.ItemID.Value;
-		const FTransform ItemXf = ToTransform(Item.Transform);
-
-		// Keep collision components in sync (no visuals; just gameplay collision)
-		if (CollisionPresenter)
-		{
-			CollisionPresenter->OnItemUpsert(ItemId, ItemXf, Item.CollisionID.Value);
-		}
-
 		// Materials are only required for mesh payloads.
 		if (Item.PayloadType == ESpatialItemType::Mesh)
 		{
@@ -277,6 +240,14 @@ void AVRegionClient::EnqueueDependenciesFromSpatialItems(const TArray<FVMSpatial
 				PendingMaterialIds.Add(MatId);
 			}
 		}
+		else if (Item.PayloadType == ESpatialItemType::Decal)
+		{
+			const FGuid MatId = Item.DecalPayload.material_id.Value;
+			if (MatId.IsValid() && !ReceivedMaterialIds.Contains(MatId) && !InFlightMaterialIds.Contains(MatId))
+			{
+				PendingMaterialIds.Add(MatId);
+			}
+		}
 
 		// Collisions now live at the spatial-item level.
 		const FGuid ColId = Item.CollisionID.Value;
@@ -284,6 +255,72 @@ void AVRegionClient::EnqueueDependenciesFromSpatialItems(const TArray<FVMSpatial
 		{
 			PendingCollisionIds.Add(ColId);
 		}
+	}
+}
+
+void AVRegionClient::PumpSpatialResolutionQueue()
+{
+	if (PendingSpatialItems.Num() <= 0)
+	{
+		return;
+	}
+
+	const int32 Count = FMath::Min(MaxSpatialItemsToResolvePerTick, PendingSpatialItems.Num());
+	for (int32 Index = 0; Index < Count; ++Index)
+	{
+		ResolveSpatialItem(PendingSpatialItems[Index]);
+	}
+	PendingSpatialItems.RemoveAt(0, Count, EAllowShrinking::No);
+}
+
+void AVRegionClient::ResolveSpatialItem(const FVMSpatialItemNet& Item)
+{
+	const FGuid ItemId = Item.ItemID.Value;
+	const FTransform ItemXf = ToTransform(Item.Transform);
+
+	if (CollisionPresenter)
+	{
+		CollisionPresenter->OnItemUpsert(ItemId, ItemXf, Item.CollisionID.Value);
+	}
+
+	switch (Item.PayloadType)
+	{
+	case ESpatialItemType::Mesh:
+	{
+		UStaticMeshComponent* MeshComp = MeshPresenter
+			? MeshPresenter->PresentMeshItem(
+				ItemId,
+				Item.MeshPayload,
+				ItemXf,
+				Item.ParentID.Value)
+			: nullptr;
+
+		if (MeshComp && MaterialPresenter)
+		{
+			MaterialPresenter->ApplyMaterialsAsync(ItemId, MeshComp, Item.MeshPayload.material_ids);
+		}
+		break;
+	}
+	case ESpatialItemType::PointLight:
+		if (LightPresenter)
+		{
+			LightPresenter->PresentPointLightItem(ItemId, Item.PointLightPayload, ItemXf);
+		}
+		break;
+	case ESpatialItemType::SpotLight:
+		if (LightPresenter)
+		{
+			LightPresenter->PresentSpotLightItem(ItemId, Item.SpotLightPayload, ItemXf);
+		}
+		break;
+	case ESpatialItemType::Decal:
+		if (DecalPresenter)
+		{
+			DecalPresenter->PresentDecalItem(ItemId, Item.DecalPayload, ItemXf);
+		}
+		break;
+	default:
+		break;
 	}
 }
 
