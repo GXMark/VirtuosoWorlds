@@ -10,6 +10,7 @@ class UVDecalPresenter;
 class UVLightPresenter;
 class UVMaterialPresenter;
 class UVMeshPresenter;
+class UVSpatialItemComponentRegistry;
 
 UCLASS()
 class VWCLIENT_API UVRegionPresenter : public UObject
@@ -22,7 +23,8 @@ public:
 		UVMaterialPresenter* InMaterialPresenter,
 		UVLightPresenter* InLightPresenter,
 		UVDecalPresenter* InDecalPresenter,
-		UVCollisionPresenter* InCollisionPresenter);
+		UVCollisionPresenter* InCollisionPresenter,
+		UVSpatialItemComponentRegistry* InItemRegistry);
 
 	void Commit(const TArray<FResolvedItemBundle>& Bundles);
 	void ReleaseItem(const FGuid& ItemId);
@@ -33,6 +35,7 @@ private:
 	TWeakObjectPtr<UVLightPresenter> LightPresenter;
 	TWeakObjectPtr<UVDecalPresenter> DecalPresenter;
 	TWeakObjectPtr<UVCollisionPresenter> CollisionPresenter;
+	TWeakObjectPtr<UVSpatialItemComponentRegistry> ItemRegistry;
 
 	void PresentBundle(const FResolvedItemBundle& Bundle);
 };

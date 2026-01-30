@@ -4,6 +4,7 @@
 #include "Presentation/VLightPresenter.h"
 #include "Presentation/VMaterialPresenter.h"
 #include "Presentation/VMeshPresenter.h"
+#include "Presentation/VSpatialItemComponentRegistry.h"
 #include "Subsystem/VAssetManager.h"
 #include "Region/VRegionPresenter.h"
 #include "Region/VRegionResolver.h"
@@ -38,17 +39,13 @@ void AVRegionClient::BeginPlay()
 		Root,
 		FAttachmentTransformRules::KeepRelativeTransform);
 
-	// Collision root (no visuals; holds per-item collision primitives)
-	CollisionRoot = NewObject<USceneComponent>(this, TEXT("CollisionRoot"));
-	CollisionRoot->RegisterComponent();
-	CollisionRoot->AttachToComponent(
-		Root,
-		FAttachmentTransformRules::KeepRelativeTransform);
-
 	AssetManager = GetWorld()->GetSubsystem<UVAssetManager>();
 
+	ItemRegistry = NewObject<UVSpatialItemComponentRegistry>(this);
+	ItemRegistry->Initialize(this, PresentationRoot);
+
 	MeshPresenter = NewObject<UVMeshPresenter>(this);
-	MeshPresenter->Initialize(this, PresentationRoot, AssetManager);
+	MeshPresenter->Initialize(this, PresentationRoot, AssetManager, ItemRegistry);
 
 	MaterialPresenter = NewObject<UVMaterialPresenter>(this);
 	MaterialPresenter->Initialize();
@@ -60,7 +57,7 @@ void AVRegionClient::BeginPlay()
 	DecalPresenter->Initialize(this, PresentationRoot);
 
 	CollisionPresenter = NewObject<UVCollisionPresenter>(this);
-	CollisionPresenter->Initialize(this, CollisionRoot);
+	CollisionPresenter->Initialize(this, PresentationRoot, ItemRegistry);
 
 	// Initialize region bridge for all request types (spatial/material/collision).
 	if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
@@ -79,7 +76,8 @@ void AVRegionClient::BeginPlay()
 		MaterialPresenter,
 		LightPresenter,
 		DecalPresenter,
-		CollisionPresenter);
+		CollisionPresenter,
+		ItemRegistry);
 
 	// Start streaming on the local client.
 	bSpatialStreamActive = true;

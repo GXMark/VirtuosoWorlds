@@ -7,11 +7,16 @@
 #include "Components/PrimitiveComponent.h"
 #include "Engine/CollisionProfile.h"
 #include "ProceduralMeshComponent.h"
+#include "Presentation/VSpatialItemComponentRegistry.h"
 
-void UVCollisionPresenter::Initialize(AActor* InOwner, USceneComponent* InCollisionRoot)
+void UVCollisionPresenter::Initialize(
+	AActor* InOwner,
+	USceneComponent* InPresentationRoot,
+	UVSpatialItemComponentRegistry* InItemRegistry)
 {
 	OwnerActor = InOwner;
-	CollisionRoot = InCollisionRoot ? InCollisionRoot : (InOwner ? InOwner->GetRootComponent() : nullptr);
+	PresentationRoot = InPresentationRoot ? InPresentationRoot : (InOwner ? InOwner->GetRootComponent() : nullptr);
+	ItemRegistry = InItemRegistry;
 }
 
 void UVCollisionPresenter::SetOnCollisionRootReady(FOnCollisionRootReady InDelegate)
@@ -21,7 +26,7 @@ void UVCollisionPresenter::SetOnCollisionRootReady(FOnCollisionRootReady InDeleg
 
 void UVCollisionPresenter::PresentCollision(const FGuid& ItemId, const FTransform& WorldTransform, const FGuid& CollisionId)
 {
-	if (!OwnerActor || !CollisionRoot)
+	if (!OwnerActor || !PresentationRoot || !ItemRegistry)
 	{
 		return;
 	}
@@ -78,12 +83,7 @@ void UVCollisionPresenter::OnItemRemoved(const FGuid& ItemId)
 			}
 		}
 		DestroyPrimitives(*Instance);
-		if (Instance->ItemRoot)
-		{
-			UE_LOG(LogTemp, Log, TEXT("CollisionPresenter: Removed collision root for ItemId=%s"), *ItemId.ToString());
-			Instance->ItemRoot->DestroyComponent();
-			Instance->ItemRoot = nullptr;
-		}
+		Instance->ItemRoot = nullptr;
 	}
 
 	InstancesByItemId.Remove(ItemId);
@@ -109,8 +109,7 @@ void UVCollisionPresenter::RebuildItem(const FGuid& ItemId)
 		return;
 	}
 
-	// Always keep the item root transform in sync (moves all primitives).
-	ItemRoot->SetWorldTransform(*Xf);
+	(void)Xf;
 
 	// No collision for this item => clear primitives.
 	if (!ColId.IsValid())
@@ -241,22 +240,18 @@ USceneComponent* UVCollisionPresenter::EnsureItemRoot(FVCollisionInstance& Insta
 		return nullptr;
 	}
 
-	if (!CollisionRoot)
-	{
-		CollisionRoot = OwnerActor->GetRootComponent();
-	}
-
 	if (!Instance.ItemRoot)
 	{
-	Instance.ItemRoot = NewObject<USceneComponent>(OwnerActor.Get(), *FString::Printf(TEXT("VW_CollisionItemRoot_%s"), *ItemId.ToString()));
-	Instance.ItemRoot->SetupAttachment(CollisionRoot ? CollisionRoot.Get() : OwnerActor->GetRootComponent());
-	Instance.ItemRoot->RegisterComponent();
-	UE_LOG(LogTemp, Log, TEXT("CollisionPresenter: Created collision root for ItemId=%s"), *ItemId.ToString());
-	if (OnCollisionRootReady.IsBound())
-	{
-		OnCollisionRootReady.Execute(ItemId, Instance.ItemRoot);
+		Instance.ItemRoot = ItemRegistry ? ItemRegistry->GetOrCreateItemRoot(ItemId) : nullptr;
+		if (Instance.ItemRoot)
+		{
+			UE_LOG(LogTemp, Log, TEXT("CollisionPresenter: Using item root for ItemId=%s"), *ItemId.ToString());
+			if (OnCollisionRootReady.IsBound())
+			{
+				OnCollisionRootReady.Execute(ItemId, Instance.ItemRoot);
+			}
+		}
 	}
-}
 
 	return Instance.ItemRoot;
 }
@@ -270,6 +265,7 @@ UBoxComponent* UVCollisionPresenter::CreateBox(USceneComponent* Parent, const FN
 
 	UBoxComponent* Comp = NewObject<UBoxComponent>(OwnerActor.Get(), Name);
 	Comp->SetupAttachment(Parent);
+	Comp->SetRelativeScale3D(FVector::OneVector);
 	Comp->RegisterComponent();
 	ConfigureCollision(Comp);
 	return Comp;
@@ -284,6 +280,7 @@ USphereComponent* UVCollisionPresenter::CreateSphere(USceneComponent* Parent, co
 
 	USphereComponent* Comp = NewObject<USphereComponent>(OwnerActor.Get(), Name);
 	Comp->SetupAttachment(Parent);
+	Comp->SetRelativeScale3D(FVector::OneVector);
 	Comp->RegisterComponent();
 	ConfigureCollision(Comp);
 	return Comp;
@@ -298,6 +295,7 @@ UCapsuleComponent* UVCollisionPresenter::CreateCapsule(USceneComponent* Parent, 
 
 	UCapsuleComponent* Comp = NewObject<UCapsuleComponent>(OwnerActor.Get(), Name);
 	Comp->SetupAttachment(Parent);
+	Comp->SetRelativeScale3D(FVector::OneVector);
 	Comp->RegisterComponent();
 	ConfigureCollision(Comp);
 	return Comp;
@@ -312,6 +310,7 @@ UProceduralMeshComponent* UVCollisionPresenter::CreateConvex(USceneComponent* Pa
 
 	UProceduralMeshComponent* Comp = NewObject<UProceduralMeshComponent>(OwnerActor.Get(), Name);
 	Comp->SetupAttachment(Parent);
+	Comp->SetRelativeScale3D(FVector::OneVector);
 	Comp->RegisterComponent();
 	Comp->SetVisibility(false, true);
 	Comp->bUseComplexAsSimpleCollision = false;

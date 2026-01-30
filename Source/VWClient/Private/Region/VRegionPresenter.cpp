@@ -5,20 +5,24 @@
 #include "Presentation/VLightPresenter.h"
 #include "Presentation/VMaterialPresenter.h"
 #include "Presentation/VMeshPresenter.h"
+#include "Presentation/VSpatialItemComponentRegistry.h"
 #include "Materials/MaterialInterface.h"
+#include "Components/SceneComponent.h"
 
 void UVRegionPresenter::Initialize(
 	UVMeshPresenter* InMeshPresenter,
 	UVMaterialPresenter* InMaterialPresenter,
 	UVLightPresenter* InLightPresenter,
 	UVDecalPresenter* InDecalPresenter,
-	UVCollisionPresenter* InCollisionPresenter)
+	UVCollisionPresenter* InCollisionPresenter,
+	UVSpatialItemComponentRegistry* InItemRegistry)
 {
 	MeshPresenter = InMeshPresenter;
 	MaterialPresenter = InMaterialPresenter;
 	LightPresenter = InLightPresenter;
 	DecalPresenter = InDecalPresenter;
 	CollisionPresenter = InCollisionPresenter;
+	ItemRegistry = InItemRegistry;
 }
 
 void UVRegionPresenter::Commit(const TArray<FResolvedItemBundle>& Bundles)
@@ -52,6 +56,10 @@ void UVRegionPresenter::ReleaseItem(const FGuid& ItemId)
 	{
 		CollisionPresenter->OnItemRemoved(ItemId);
 	}
+	if (ItemRegistry.IsValid())
+	{
+		ItemRegistry->DestroyItemRoot(ItemId);
+	}
 	if (MaterialPresenter.IsValid())
 	{
 		MaterialPresenter->ForgetItem(ItemId);
@@ -60,6 +68,14 @@ void UVRegionPresenter::ReleaseItem(const FGuid& ItemId)
 
 void UVRegionPresenter::PresentBundle(const FResolvedItemBundle& Bundle)
 {
+	if (ItemRegistry.IsValid())
+	{
+		if (USceneComponent* ItemRoot = ItemRegistry->GetOrCreateItemRoot(Bundle.ItemId))
+		{
+			ItemRoot->SetWorldTransform(Bundle.WorldTransform);
+		}
+	}
+
 	switch (Bundle.ItemType)
 	{
 	case ESpatialItemType::Mesh:

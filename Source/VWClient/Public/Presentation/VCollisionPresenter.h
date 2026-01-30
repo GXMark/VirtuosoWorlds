@@ -10,6 +10,7 @@ class UBoxComponent;
 class USphereComponent;
 class UCapsuleComponent;
 class UProceduralMeshComponent;
+class UVSpatialItemComponentRegistry;
 
 USTRUCT()
 struct FVCollisionInstance
@@ -40,7 +41,7 @@ struct FVCollisionInstance
 };
 
 /**
- * Owns per-item collision components (box/sphere/capsule) under a single collision root.
+ * Owns per-item collision components (box/sphere/capsule) under shared item roots.
  * Collision definitions are streamed as shared FVMCollision objects keyed by collision id.
  */
 UCLASS()
@@ -51,7 +52,10 @@ class VWCLIENT_API UVCollisionPresenter : public UObject
 public:
 	DECLARE_DELEGATE_TwoParams(FOnCollisionRootReady, const FGuid& /*ItemId*/, USceneComponent* /*Component*/);
 
-	void Initialize(AActor* InOwner, USceneComponent* InCollisionRoot);
+	void Initialize(
+		AActor* InOwner,
+		USceneComponent* InPresentationRoot,
+		UVSpatialItemComponentRegistry* InItemRegistry);
 	void SetOnCollisionRootReady(FOnCollisionRootReady InDelegate);
 
 	// Called when a spatial item is ready for collision presentation.
@@ -70,7 +74,10 @@ private:
 	TObjectPtr<AActor> OwnerActor = nullptr;
 
 	UPROPERTY()
-	TObjectPtr<USceneComponent> CollisionRoot = nullptr;
+	TObjectPtr<USceneComponent> PresentationRoot = nullptr;
+
+	UPROPERTY()
+	TObjectPtr<UVSpatialItemComponentRegistry> ItemRegistry = nullptr;
 
 	UPROPERTY()
 	TMap<FGuid, FVMCollision> CollisionDefsById;
