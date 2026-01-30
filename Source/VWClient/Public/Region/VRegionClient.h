@@ -21,6 +21,7 @@ class UVAssetManager;
 class UVCollisionPresenter;
 class UVRegionResolver;
 class UVRegionPresenter;
+class UVSpatialItemComponentRegistry;
 class APawn;
 
 UCLASS()
@@ -49,9 +50,6 @@ private:
 	TObjectPtr<USceneComponent> PresentationRoot;
 
 	UPROPERTY()
-	TObjectPtr<USceneComponent> CollisionRoot;
-
-	UPROPERTY()
 	TObjectPtr<UVMeshPresenter> MeshPresenter;
 
 	UPROPERTY()
@@ -65,6 +63,9 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UVCollisionPresenter> CollisionPresenter;
+
+	UPROPERTY()
+	TObjectPtr<UVSpatialItemComponentRegistry> ItemRegistry;
 
 	UPROPERTY()
 	TObjectPtr<UVRegionResolver> RegionResolver;
