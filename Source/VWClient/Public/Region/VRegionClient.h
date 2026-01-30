@@ -21,7 +21,7 @@ class UVAssetManager;
 class UVCollisionPresenter;
 class UVRegionResolver;
 class UVRegionPresenter;
-class APlayerController;
+class APawn;
 
 UCLASS()
 class VWCLIENT_API AVRegionClient : public AActor
@@ -76,7 +76,7 @@ private:
 	TObjectPtr<URegionClientBridge> RegionBridge;
 
 	UPROPERTY()
-	TWeakObjectPtr<APlayerController> CachedPlayerController;
+	TWeakObjectPtr<APawn> CachedPawn;
 
 	// Cached asset manager pointer (world subsystem)
 	UPROPERTY()
