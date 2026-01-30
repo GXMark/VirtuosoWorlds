@@ -6,6 +6,7 @@
 #include "VMeshPresenter.generated.h"
 
 class UStaticMeshComponent;
+class UStaticMesh;
 class UVAssetManager;
 
 UCLASS()
@@ -23,6 +24,12 @@ public:
 		const FVMMeshComponentNet& InMeshData,
 		const FTransform& InWorldTransform,
 		const FGuid& InParentId);
+	UStaticMeshComponent* PresentMeshItemWithAsset(
+		const FGuid& InItemId,
+		const FVMMeshComponentNet& InMeshData,
+		const FTransform& InWorldTransform,
+		const FGuid& InParentId,
+		UStaticMesh* InMeshAsset);
 	UStaticMeshComponent* FindMeshComponent(const FGuid& InItemId) const;
 	void DestroyItem(const FGuid& InItemId);
 

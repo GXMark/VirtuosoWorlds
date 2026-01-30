@@ -23,6 +23,16 @@ UStaticMeshComponent* UVMeshPresenter::PresentMeshItem(
 	const FTransform& InWorldTransform,
 	const FGuid& InParentId)
 {
+	return PresentMeshItemWithAsset(InItemId, InMeshData, InWorldTransform, InParentId, nullptr);
+}
+
+UStaticMeshComponent* UVMeshPresenter::PresentMeshItemWithAsset(
+	const FGuid& InItemId,
+	const FVMMeshComponentNet& InMeshData,
+	const FTransform& InWorldTransform,
+	const FGuid& InParentId,
+	UStaticMesh* InMeshAsset)
+{
 	if (!PresentationOwner.IsValid() || !PresentationRoot.IsValid() || !AssetManager)
 	{
 		return nullptr;
@@ -49,6 +59,13 @@ UStaticMeshComponent* UVMeshPresenter::PresentMeshItem(
 	}
 
 	ExistingComp->SetWorldTransform(InWorldTransform);
+
+	if (InMeshAsset)
+	{
+		ExistingComp->SetStaticMesh(InMeshAsset);
+		RequestedMeshByItemId.Add(InItemId, MeshId);
+		return ExistingComp;
+	}
 
 	const FGuid DesiredMeshId = InMeshData.mesh_ref.id.Value;
 	if (const FGuid* CurrentDesired = RequestedMeshByItemId.Find(InItemId))
