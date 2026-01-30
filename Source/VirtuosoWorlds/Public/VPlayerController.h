@@ -87,6 +87,9 @@ public:
 	UFUNCTION(Client, Reliable)
 	void ClientReceiveCollisionsBatch(const TArray<FVMCollision>& Collisions);
 
+	UFUNCTION(BlueprintCallable, Category="Spatial")
+	float GetSpatialDistancePercent() const;
+
 	
 protected:
 
@@ -132,5 +135,9 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<URegionServerBridge> RegionServerBridge;
+
+	float MaxSpatialDistance = 0.f;
+	int32 SpatialItemsReceived = 0;
+	bool bSpawnedAtSpatialThreshold = false;
 
 };
