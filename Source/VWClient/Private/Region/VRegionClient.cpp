@@ -234,7 +234,7 @@ void AVRegionClient::OnCollisionsBatchReceived(const TArray<FVMCollision>& Colli
 	PendingCollisionBatches.Add(Collisions);
 }
 
-void AVRegionClient::OnSpatialItemRemoved(const FGuid& ItemId)
+void AVRegionClient::OnSpatialItemRemoved(const FGuid& ItemId) const
 {
 	if (RegionResolver)
 	{

@@ -111,5 +111,5 @@ public:
 	void OnCollisionsBatchReceived(const TArray<FVMCollision>& Collisions);
 
 	// Called when a spatial item unloads.
-	void OnSpatialItemRemoved(const FGuid& ItemId);
+	void OnSpatialItemRemoved(const FGuid& ItemId) const;
 };
