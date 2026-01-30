@@ -5,7 +5,8 @@
 #include "Presentation/VMaterialPresenter.h"
 #include "Presentation/VMeshPresenter.h"
 #include "Subsystem/VAssetManager.h"
-#include "Region/VContentResolver.h"
+#include "Region/VRegionPresenter.h"
+#include "Region/VRegionResolver.h"
 #include "Region/VRegionClientBridge.h"
 #include "Components/SceneComponent.h"
 #include "Engine/World.h"
@@ -67,16 +68,16 @@ void AVRegionClient::BeginPlay()
 		RegionBridge->Initialize(PC);
 	}
 
-	ContentResolver = NewObject<UVContentResolver>(this);
-	ContentResolver->Initialize(
-		this,
-		RegionBridge,
+	RegionResolver = NewObject<UVRegionResolver>(this);
+	RegionResolver->Initialize(RegionBridge, AssetManager);
+
+	RegionPresenter = NewObject<UVRegionPresenter>(this);
+	RegionPresenter->Initialize(
 		MeshPresenter,
 		MaterialPresenter,
 		LightPresenter,
 		DecalPresenter,
-		CollisionPresenter,
-		AssetManager);
+		CollisionPresenter);
 
 	// Start streaming on the local client.
 	bSpatialStreamActive = true;
@@ -95,6 +96,7 @@ void AVRegionClient::BeginPlay()
 void AVRegionClient::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	(void)DeltaSeconds;
 
 	if (GetNetMode() != NM_Client)
 	{
@@ -136,31 +138,47 @@ void AVRegionClient::Tick(float DeltaSeconds)
 		}
 	}
 
+	if (RegionResolver)
+	{
+		for (const TArray<FVMSpatialItemNet>& Batch : PendingSpatialBatches)
+		{
+			RegionResolver->OnSpatialBatchReceived(Batch);
+		}
+		PendingSpatialBatches.Reset();
+
+		for (const TArray<FVMMaterial>& Batch : PendingMaterialBatches)
+		{
+			RegionResolver->OnMaterialsBatchReceived(Batch);
+		}
+		PendingMaterialBatches.Reset();
+
+		for (const TArray<FVMCollision>& Batch : PendingCollisionBatches)
+		{
+			RegionResolver->OnCollisionsBatchReceived(Batch);
+		}
+		PendingCollisionBatches.Reset();
+	}
+
+	if (RegionResolver && RegionPresenter)
+	{
+		TArray<FResolvedItemBundle> Bundles;
+		RegionResolver->GetResolvedBundles(MaxResolvedBundlesPerTick, Bundles);
+		RegionPresenter->Commit(Bundles);
+	}
+
 	// If a request is in-flight, wait for the response before doing more.
 	if (bSpatialRequestInFlight)
 	{
-		if (ContentResolver)
-		{
-			ContentResolver->Tick(DeltaSeconds);
-		}
 		return;
 	}
 
 	// If the server told us there is no more data for the current stream, stop unless we recenter.
 	if (!bSpatialHasMore)
 	{
-		if (ContentResolver)
-		{
-			ContentResolver->Tick(DeltaSeconds);
-		}
 		return;
 	}
 
 	RequestNextSpatialBatch();
-	if (ContentResolver)
-	{
-		ContentResolver->Tick(DeltaSeconds);
-	}
 }
 
 void AVRegionClient::OnSpatialBatchReceived(const TArray<FVMSpatialItemNet>& Items, bool bHasMore)
@@ -180,11 +198,7 @@ void AVRegionClient::OnSpatialBatchReceived(const TArray<FVMSpatialItemNet>& Ite
 		bSpatialHasMore = true;
 	}
 
-	if (ContentResolver)
-	{
-		ContentResolver->OnSpatialBatchReceived(Items);
-		ContentResolver->Tick(0.f);
-	}
+	PendingSpatialBatches.Add(Items);
 }
 
 void AVRegionClient::SetSpatialStreamingEnabled(bool bEnabled)
@@ -216,26 +230,22 @@ void AVRegionClient::RequestNextSpatialBatch()
 
 void AVRegionClient::OnMaterialsBatchReceived(const TArray<FVMMaterial>& Materials)
 {
-	if (ContentResolver)
-	{
-		ContentResolver->OnMaterialsBatchReceived(Materials);
-		ContentResolver->Tick(0.f);
-	}
+	PendingMaterialBatches.Add(Materials);
 }
 
 void AVRegionClient::OnCollisionsBatchReceived(const TArray<FVMCollision>& Collisions)
 {
-	if (ContentResolver)
-	{
-		ContentResolver->OnCollisionsBatchReceived(Collisions);
-		ContentResolver->Tick(0.f);
-	}
+	PendingCollisionBatches.Add(Collisions);
 }
 
 void AVRegionClient::OnSpatialItemRemoved(const FGuid& ItemId)
 {
-	if (ContentResolver)
+	if (RegionResolver)
 	{
-		ContentResolver->OnSpatialItemRemoved(ItemId);
+		RegionResolver->OnSpatialItemRemoved(ItemId);
+	}
+	if (RegionPresenter)
+	{
+		RegionPresenter->ReleaseItem(ItemId);
 	}
 }

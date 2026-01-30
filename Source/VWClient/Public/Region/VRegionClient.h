@@ -7,7 +7,8 @@
 #include "Model/Network/VMSpatialItemNet.h"
 #include "Model/Package/VMMaterial.h"
 #include "Model/Package/VMCollision.h"
-#include "Region/VContentResolver.h"
+#include "Region/VRegionPresenter.h"
+#include "Region/VRegionResolver.h"
 #include "Region/VRegionClientBridge.h"
 #include "VRegionClient.generated.h"
 
@@ -18,7 +19,8 @@ class UVMaterialPresenter;
 class UVMeshPresenter;
 class UVAssetManager;
 class UVCollisionPresenter;
-class UVContentResolver;
+class UVRegionResolver;
+class UVRegionPresenter;
 
 UCLASS()
 class VWCLIENT_API AVRegionClient : public AActor
@@ -64,7 +66,10 @@ private:
 	TObjectPtr<UVCollisionPresenter> CollisionPresenter;
 
 	UPROPERTY()
-	TObjectPtr<UVContentResolver> ContentResolver;
+	TObjectPtr<UVRegionResolver> RegionResolver;
+
+	UPROPERTY()
+	TObjectPtr<UVRegionPresenter> RegionPresenter;
 
 	UPROPERTY()
 	TObjectPtr<URegionClientBridge> RegionBridge;
@@ -85,9 +90,14 @@ private:
 	bool bSpatialRecenterPending = false;
 	FVector PendingSpatialOrigin = FVector::ZeroVector;
 	int32 MaxSpatialItemsPerRequest = 64;
+	int32 MaxResolvedBundlesPerTick = 64;
 
 	// Helper to issue the next spatial request via the owning controller interface.
 	void RequestNextSpatialBatch();
+
+	TArray<TArray<FVMSpatialItemNet>> PendingSpatialBatches;
+	TArray<TArray<FVMMaterial>> PendingMaterialBatches;
+	TArray<TArray<FVMCollision>> PendingCollisionBatches;
 
 public:
 	// Called by the local player controller when a material batch response arrives.
