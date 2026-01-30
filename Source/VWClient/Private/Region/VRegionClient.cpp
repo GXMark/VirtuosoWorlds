@@ -10,6 +10,7 @@
 #include "Region/VRegionClientBridge.h"
 #include "Components/SceneComponent.h"
 #include "Engine/World.h"
+#include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 
 AVRegionClient::AVRegionClient()
@@ -61,13 +62,12 @@ void AVRegionClient::BeginPlay()
 	CollisionPresenter = NewObject<UVCollisionPresenter>(this);
 	CollisionPresenter->Initialize(this, CollisionRoot);
 
-	CachedPlayerController = GetWorld()->GetFirstPlayerController();
-
 	// Initialize region bridge for all request types (spatial/material/collision).
-	if (APlayerController* PC = CachedPlayerController.Get())
+	if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
 	{
 		RegionBridge = NewObject<URegionClientBridge>(this, TEXT("RegionBridge"));
 		RegionBridge->Initialize(PC);
+		CachedPawn = PC->GetPawn();
 	}
 
 	RegionResolver = NewObject<UVRegionResolver>(this);
@@ -86,12 +86,9 @@ void AVRegionClient::BeginPlay()
 	bSpatialHasMore = true;
 	bSpatialRequestInFlight = false;
 
-	if (APlayerController* PC = CachedPlayerController.Get())
+	if (APawn* P = CachedPawn.Get())
 	{
-		if (APawn* P = PC->GetPawn())
-		{
-			SpatialOrigin = P->GetActorLocation();
-		}
+		SpatialOrigin = P->GetActorLocation();
 	}
 }
 
@@ -112,12 +109,18 @@ void AVRegionClient::Tick(float DeltaSeconds)
 
 	// Determine current player position.
 	FVector CurrentPos = SpatialOrigin;
-	if (APlayerController* PC = CachedPlayerController.Get())
+	APawn* Pawn = CachedPawn.Get();
+	if (!Pawn)
 	{
-		if (APawn* P = PC->GetPawn())
+		if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
 		{
-			CurrentPos = P->GetActorLocation();
+			Pawn = PC->GetPawn();
+			CachedPawn = Pawn;
 		}
+	}
+	if (Pawn)
+	{
+		CurrentPos = Pawn->GetActorLocation();
 	}
 
 	// Movement-based streaming: if the player moved far enough, recenter the stream.
