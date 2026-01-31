@@ -63,6 +63,11 @@ public:
 	// Called by the region stream when material items arrive. Adds items, creates MIDs, and kicks texture resolves.
 	void SubmitMaterialItems(const TArray<FVMMaterial>& InMaterials);
 
+	// Cached lookups (no direct agent access outside AssetManager).
+	UStaticMesh* GetCachedStaticMesh(const FGuid& InMeshId) const;
+	UMaterialInstanceDynamic* GetCachedMaterialInstance(const FGuid& InMaterialId) const;
+	bool GetMaterialItem(const FGuid& InMaterialId, FVMMaterial& OutMaterialItem) const;
+
 	/**
 	 * Throttle for concurrent remote asset requests (download + load).
 	 * Applies to packaged runtime only.

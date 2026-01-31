@@ -640,6 +640,36 @@ void UVAssetManager::RequestStaticMeshAsync(
 	EnqueueRemoteAssetRequest(Key, InMesh.mesh_ref.name);
 }
 
+UStaticMesh* UVAssetManager::GetCachedStaticMesh(const FGuid& InMeshId) const
+{
+	if (!MeshAgent)
+	{
+		return nullptr;
+	}
+
+	return MeshAgent->GetMesh(InMeshId);
+}
+
+UMaterialInstanceDynamic* UVAssetManager::GetCachedMaterialInstance(const FGuid& InMaterialId) const
+{
+	if (!MaterialAgent)
+	{
+		return nullptr;
+	}
+
+	return MaterialAgent->GetMaterial(InMaterialId);
+}
+
+bool UVAssetManager::GetMaterialItem(const FGuid& InMaterialId, FVMMaterial& OutMaterialItem) const
+{
+	if (!MaterialAgent)
+	{
+		return false;
+	}
+
+	return MaterialAgent->GetMaterialItem(InMaterialId, OutMaterialItem);
+}
+
 bool UVAssetManager::ShouldUseEditorAssetPathResolution() const
 {
 #if WITH_EDITOR
