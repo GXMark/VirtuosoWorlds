@@ -1,18 +1,24 @@
-#include "Subsystem/VRegionClientSubsystem.h"
+#include "Region/VRegionClient.h"
 
+#include "Components/StaticMeshComponent.h"
+#include "Engine/World.h"
+#include "EngineUtils.h"
+#include "GameFramework/PlayerController.h"
 #include "Interface/VSpatialItemActorInterface.h"
 #include "Presentation/VMaterialPresenterApplier.h"
 #include "Presentation/VMaterialResolver.h"
 #include "Region/VRegionClientBridge.h"
 #include "Subsystem/VAssetManager.h"
 #include "Utility/VSpatialActorEvents.h"
-#include "Components/StaticMeshComponent.h"
-#include "Engine/World.h"
-#include "GameFramework/PlayerController.h"
 
-void URegionClientSubsystem::Initialize(FSubsystemCollectionBase& Collection)
+AVRegionClient::AVRegionClient()
 {
-	Super::Initialize(Collection);
+	PrimaryActorTick.bCanEverTick = false;
+}
+
+void AVRegionClient::BeginPlay()
+{
+	Super::BeginPlay();
 
 	UWorld* World = GetWorld();
 	if (!World || World->GetNetMode() != NM_Client)
@@ -35,14 +41,14 @@ void URegionClientSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	MaterialPresenter->Initialize(MaterialResolver);
 
 	PostInitHandle = FSpatialActorEvents::OnSpatialActorPostInit().AddUObject(
-		this, &URegionClientSubsystem::HandleSpatialActorPostInit);
+		this, &AVRegionClient::HandleSpatialActorPostInit);
 	MeshAssetHandle = FSpatialActorEvents::OnSpatialActorMeshAssetIdChanged().AddUObject(
-		this, &URegionClientSubsystem::HandleMeshAssetIdChanged);
+		this, &AVRegionClient::HandleMeshAssetIdChanged);
 	MaterialIdsHandle = FSpatialActorEvents::OnSpatialActorMaterialIdsChanged().AddUObject(
-		this, &URegionClientSubsystem::HandleMaterialIdsChanged);
+		this, &AVRegionClient::HandleMaterialIdsChanged);
 }
 
-void URegionClientSubsystem::Deinitialize()
+void AVRegionClient::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	if (PostInitHandle.IsValid())
 	{
@@ -57,10 +63,10 @@ void URegionClientSubsystem::Deinitialize()
 		FSpatialActorEvents::OnSpatialActorMaterialIdsChanged().Remove(MaterialIdsHandle);
 	}
 
-	Super::Deinitialize();
+	Super::EndPlay(EndPlayReason);
 }
 
-void URegionClientSubsystem::OnMaterialsBatchReceived(const TArray<FVMMaterial>& Materials)
+void AVRegionClient::OnMaterialsBatchReceived(const TArray<FVMMaterial>& Materials)
 {
 	if (MaterialResolver)
 	{
@@ -68,7 +74,28 @@ void URegionClientSubsystem::OnMaterialsBatchReceived(const TArray<FVMMaterial>&
 	}
 }
 
-void URegionClientSubsystem::HandleSpatialActorPostInit(AActor* Actor, const FSpatialItemId& SpatialId)
+AVRegionClient* AVRegionClient::Get(const UObject* WorldContext)
+{
+	if (!WorldContext)
+	{
+		return nullptr;
+	}
+
+	UWorld* World = WorldContext->GetWorld();
+	if (!World)
+	{
+		return nullptr;
+	}
+
+	for (TActorIterator<AVRegionClient> It(World); It; ++It)
+	{
+		return *It;
+	}
+
+	return nullptr;
+}
+
+void AVRegionClient::HandleSpatialActorPostInit(AActor* Actor, const FSpatialItemId& SpatialId)
 {
 	if (!Actor || !GetWorld() || GetWorld()->GetNetMode() != NM_Client)
 	{
@@ -85,7 +112,7 @@ void URegionClientSubsystem::HandleSpatialActorPostInit(AActor* Actor, const FSp
 	SyncVisualStateFromActor(Actor, ItemId);
 }
 
-void URegionClientSubsystem::HandleMeshAssetIdChanged(AActor* Actor, const FMeshAssetId& MeshAssetId)
+void AVRegionClient::HandleMeshAssetIdChanged(AActor* Actor, const FMeshAssetId& MeshAssetId)
 {
 	if (!Actor)
 	{
@@ -106,7 +133,7 @@ void URegionClientSubsystem::HandleMeshAssetIdChanged(AActor* Actor, const FMesh
 	TryApplyMesh(ItemId, Actor, State);
 }
 
-void URegionClientSubsystem::HandleMaterialIdsChanged(AActor* Actor, const TArray<uint32>& MaterialIds)
+void AVRegionClient::HandleMaterialIdsChanged(AActor* Actor, const TArray<uint32>& MaterialIds)
 {
 	if (!Actor)
 	{
@@ -148,7 +175,7 @@ void URegionClientSubsystem::HandleMaterialIdsChanged(AActor* Actor, const TArra
 	TryApplyMaterials(ItemId, Actor, State);
 }
 
-void URegionClientSubsystem::HandleActorDestroyed(AActor* Actor)
+void AVRegionClient::HandleActorDestroyed(AActor* Actor)
 {
 	if (!Actor)
 	{
@@ -175,7 +202,7 @@ void URegionClientSubsystem::HandleActorDestroyed(AActor* Actor)
 	}
 }
 
-void URegionClientSubsystem::RegisterActor(AActor* Actor, const FGuid& ItemId)
+void AVRegionClient::RegisterActor(AActor* Actor, const FGuid& ItemId)
 {
 	if (!Actor)
 	{
@@ -186,10 +213,10 @@ void URegionClientSubsystem::RegisterActor(AActor* Actor, const FGuid& ItemId)
 	SpatialItemActors.FindOrAdd(ItemId) = Actor;
 	ActorToSpatialId.FindOrAdd(ActorKey) = ItemId;
 
-	Actor->OnDestroyed.AddUniqueDynamic(this, &URegionClientSubsystem::HandleActorDestroyed);
+	Actor->OnDestroyed.AddUniqueDynamic(this, &AVRegionClient::HandleActorDestroyed);
 }
 
-FGuid URegionClientSubsystem::ResolveSpatialId(AActor* Actor, const FSpatialItemId* SpatialIdOverride)
+FGuid AVRegionClient::ResolveSpatialId(AActor* Actor, const FSpatialItemId* SpatialIdOverride)
 {
 	if (!Actor)
 	{
@@ -224,7 +251,7 @@ FGuid URegionClientSubsystem::ResolveSpatialId(AActor* Actor, const FSpatialItem
 	return FGuid();
 }
 
-void URegionClientSubsystem::SyncVisualStateFromActor(AActor* Actor, const FGuid& ItemId)
+void AVRegionClient::SyncVisualStateFromActor(AActor* Actor, const FGuid& ItemId)
 {
 	if (!Actor)
 	{
@@ -250,7 +277,7 @@ void URegionClientSubsystem::SyncVisualStateFromActor(AActor* Actor, const FGuid
 	}
 }
 
-void URegionClientSubsystem::TryApplyMesh(const FGuid& ItemId, AActor* Actor, FSpatialActorVisualState& State) const
+void AVRegionClient::TryApplyMesh(const FGuid& ItemId, AActor* Actor, FSpatialActorVisualState& State) const
 {
 	if (!Actor || !AssetManager)
 	{
@@ -280,7 +307,7 @@ void URegionClientSubsystem::TryApplyMesh(const FGuid& ItemId, AActor* Actor, FS
 	}
 }
 
-void URegionClientSubsystem::TryApplyMaterials(const FGuid& ItemId, AActor* Actor, FSpatialActorVisualState& State) const
+void AVRegionClient::TryApplyMaterials(const FGuid& ItemId, AActor* Actor, FSpatialActorVisualState& State) const
 {
 	if (!Actor || !MaterialPresenter)
 	{
