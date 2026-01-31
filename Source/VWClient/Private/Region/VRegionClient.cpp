@@ -1,5 +1,4 @@
 #include "Region/VRegionClient.h"
-#include "Presentation/VCollisionPresenter.h"
 #include "Presentation/VDecalPresenter.h"
 #include "Presentation/VLightPresenter.h"
 #include "Presentation/VMaterialPresenter.h"
@@ -56,10 +55,7 @@ void AVRegionClient::BeginPlay()
 	DecalPresenter = NewObject<UVDecalPresenter>(this);
 	DecalPresenter->Initialize(this, PresentationRoot);
 
-	CollisionPresenter = NewObject<UVCollisionPresenter>(this);
-	CollisionPresenter->Initialize(this, PresentationRoot, ItemRegistry);
-
-	// Initialize region bridge for all request types (spatial/material/collision).
+	// Initialize region bridge for all request types (spatial/material).
 	if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
 	{
 		RegionBridge = NewObject<URegionClientBridge>(this, TEXT("RegionBridge"));
@@ -76,7 +72,6 @@ void AVRegionClient::BeginPlay()
 		MaterialPresenter,
 		LightPresenter,
 		DecalPresenter,
-		CollisionPresenter,
 		ItemRegistry);
 
 	// Start streaming on the local client.
@@ -149,11 +144,6 @@ void AVRegionClient::Tick(float DeltaSeconds)
 		}
 		PendingMaterialBatches.Reset();
 
-		for (const TArray<FVMCollision>& Batch : PendingCollisionBatches)
-		{
-			RegionResolver->OnCollisionsBatchReceived(Batch);
-		}
-		PendingCollisionBatches.Reset();
 	}
 
 	if (RegionResolver && RegionPresenter)
@@ -229,11 +219,6 @@ void AVRegionClient::RequestNextSpatialBatch()
 void AVRegionClient::OnMaterialsBatchReceived(const TArray<FVMMaterial>& Materials)
 {
 	PendingMaterialBatches.Add(Materials);
-}
-
-void AVRegionClient::OnCollisionsBatchReceived(const TArray<FVMCollision>& Collisions)
-{
-	PendingCollisionBatches.Add(Collisions);
 }
 
 void AVRegionClient::OnSpatialItemRemoved(const FGuid& ItemId) const

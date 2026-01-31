@@ -76,11 +76,6 @@ void AVPlayerController::ClientRequestMaterialsBatch(const TArray<FGuid>& Materi
 {
 	ServerRequestMaterialsBatch(MaterialIds);
 }
-
-void AVPlayerController::ClientRequestCollisionsBatch(const TArray<FGuid>& CollisionIds)
-{
-	ServerRequestCollisionsBatch(CollisionIds);
-}
 #endif
 
 void AVPlayerController::OnRep_PlayerState()
@@ -323,11 +318,6 @@ void AVPlayerController::ServerSendMaterialsBatch(const TArray<FVMMaterial>& Mat
 {
 	ClientReceiveMaterialsBatch(Materials);
 }
-
-void AVPlayerController::ServerSendCollisionsBatch(const TArray<FVMCollision>& Collisions)
-{
-	ClientReceiveCollisionsBatch(Collisions);
-}
 #endif
 
 void AVPlayerController::ServerRequestSpatialItems_Implementation(const FVector& Origin, int32 MaxItems)
@@ -435,51 +425,6 @@ void AVPlayerController::ClientReceiveMaterialsBatch_Implementation(const TArray
 	if (URegionClientSubsystem* RegionSubsystem = World->GetSubsystem<URegionClientSubsystem>())
 	{
 		RegionSubsystem->OnMaterialsBatchReceived(Materials);
-	}
-#endif
-}
-
-// =========================
-// Collision RPCs
-// =========================
-
-void AVPlayerController::ServerRequestCollisionsBatch_Implementation(const TArray<FGuid>& CollisionIds)
-{
-#if WITH_SERVER_CODE
-	if (!HasAuthority())
-	{
-		return;
-	}
-
-	if (!RegionServerBridge)
-	{
-		RegionServerBridge = NewObject<URegionServerBridge>(this);
-		RegionServerBridge->Initialize(GetWorld());
-	}
-
-	RegionServerBridge->HandleCollisionsRequest(this, CollisionIds);
-#endif
-}
-
-void AVPlayerController::ClientReceiveCollisionsBatch_Implementation(const TArray<FVMCollision>& Collisions)
-{
-#if WITH_CLIENT_CODE
-	UWorld* World = GetWorld();
-	if (!World)
-	{
-		return;
-	}
-
-	AVRegionClient* RegionClient = nullptr;
-	for (TActorIterator<AVRegionClient> It(World); It; ++It)
-	{
-		RegionClient = *It;
-		break;
-	}
-
-	if (RegionClient)
-	{
-		RegionClient->OnCollisionsBatchReceived(Collisions);
 	}
 #endif
 }

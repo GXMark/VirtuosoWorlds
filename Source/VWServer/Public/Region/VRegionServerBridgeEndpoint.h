@@ -9,7 +9,6 @@
 // Use module-relative includes so this header is robust across module include paths.
 #include "Model/Network/VMSpatialItemNet.h"
 #include "Model/Package/VMMaterial.h"
-#include "Model/Package/VMCollision.h"
 #include "VRegionServerBridgeEndpoint.generated.h"
 
 /**
@@ -30,5 +29,4 @@ class VWSERVER_API IVRegionServerBridgeEndpoint
 public:
 	virtual void ServerSendSpatialItems(const TArray<FVMSpatialItemNet>& Items, bool bHasMore) = 0;
 	virtual void ServerSendMaterialsBatch(const TArray<FVMMaterial>& Materials) = 0;
-	virtual void ServerSendCollisionsBatch(const TArray<FVMCollision>& Collisions) = 0;
 };

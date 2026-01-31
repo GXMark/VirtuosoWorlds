@@ -2,7 +2,6 @@
 
 #include "CoreMinimal.h"
 #include "Model/Network/VMSpatialItemNet.h"
-#include "Model/Package/VMCollision.h"
 #include "Model/Package/VMMaterial.h"
 #include "UObject/Object.h"
 #include "VRegionResolver.generated.h"
@@ -50,11 +49,6 @@ struct FResolvedItemBundle
 	UPROPERTY()
 	bool bTexturesReady = false;
 
-	UPROPERTY()
-	bool bHasCollision = false;
-
-	UPROPERTY()
-	FVMCollision CollisionData;
 };
 
 USTRUCT()
@@ -75,16 +69,11 @@ struct FResolvedSpatialInstance
 	TArray<FGuid> TextureIds;
 
 	UPROPERTY()
-	FGuid CollisionId;
-
-	UPROPERTY()
 	ESpatialItemType PayloadType = ESpatialItemType::Mesh;
 
 	UPROPERTY()
 	bool bRequestedMaterials = false;
 
-	UPROPERTY()
-	bool bRequestedCollision = false;
 
 	UPROPERTY()
 	bool bIssued = false;
@@ -102,7 +91,6 @@ public:
 
 	void OnSpatialBatchReceived(const TArray<FVMSpatialItemNet>& Items);
 	void OnMaterialsBatchReceived(const TArray<FVMMaterial>& Materials);
-	void OnCollisionsBatchReceived(const TArray<FVMCollision>& Collisions);
 	void OnSpatialItemRemoved(const FGuid& ItemId);
 
 	bool IsBundleReady(const FGuid& ItemId) const;
@@ -115,7 +103,6 @@ private:
 
 	TMap<FGuid, FVMSpatialItemNet> PendingSpatialData;
 	TMap<FGuid, FVMMaterial> PendingMaterials;
-	TMap<FGuid, FVMCollision> PendingCollisions;
 	TMap<FGuid, FResolvedSpatialInstance> ResolvedInstances;
 
 	TArray<FGuid> SpatialOrder;
@@ -123,15 +110,11 @@ private:
 	TSet<FGuid> IssuedItemIds;
 
 	TSet<FGuid> RequestedMaterialIds;
-	TSet<FGuid> RequestedCollisionIds;
 	TSet<FGuid> RequestedMeshIds;
 	TSet<FGuid> RequestedTextureIds;
 
 	bool bMaterialRequestInFlight = false;
-	bool bCollisionRequestInFlight = false;
-
 	int32 MaxMaterialItemLimit = 64;
-	int32 MaxCollisionItemLimit = 64;
 
 	void UpdateOrCreateInstance(const FVMSpatialItemNet& Item);
 	void UpdateTextureDependencies(FResolvedSpatialInstance& Instance);
@@ -140,7 +123,6 @@ private:
 	bool AreMaterialsReady(const FResolvedSpatialInstance& Instance) const;
 	bool AreTexturesReady(const FResolvedSpatialInstance& Instance) const;
 	bool IsMeshReady(const FResolvedSpatialInstance& Instance) const;
-	bool IsCollisionReady(const FResolvedSpatialInstance& Instance) const;
 	bool CanRender(const FResolvedSpatialInstance& Instance) const;
 	bool CanActivate(const FResolvedSpatialInstance& Instance) const;
 };

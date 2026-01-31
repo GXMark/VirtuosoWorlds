@@ -32,16 +32,3 @@ void URegionClientBridge::RequestMaterialsBatch(const TArray<FGuid>& MaterialIds
 		Endpoint->ClientRequestMaterialsBatch(MaterialIds);
 	}
 }
-
-void URegionClientBridge::RequestCollisionsBatch(const TArray<FGuid>& CollisionIds) const
-{
-	if (!IsValidBridge())
-	{
-		return;
-	}
-
-	if (IVRegionClientBridgeEndpoint* Endpoint = Cast<IVRegionClientBridgeEndpoint>(OwningController))
-	{
-		Endpoint->ClientRequestCollisionsBatch(CollisionIds);
-	}
-}
