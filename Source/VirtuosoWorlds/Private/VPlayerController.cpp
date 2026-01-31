@@ -17,7 +17,6 @@
 
 #if WITH_CLIENT_CODE
 #include "Subsystem/VAssetManager.h"
-#include "Region/VRegionClient.h"
 #if WITH_CLIENT_CODE
 #include "Subsystem/VRegionClientSubsystem.h"
 #endif
@@ -135,12 +134,6 @@ void AVPlayerController::BeginPlay()
 				UE_LOG(LogTemp, Error, TEXT("Player Controller - Begin Play [ Cache Manager Failed To Initialize ]"));
 			}
 		}
-
-		// Spawn the region-client
-		FActorSpawnParameters SpawnParams;
-		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-		AVRegionClient* RegionClient = GetWorld()->SpawnActor<AVRegionClient>(AVRegionClient::StaticClass(), SpawnParams);
-		(void)RegionClient;
 #endif
 	}
 }
@@ -349,18 +342,6 @@ void AVPlayerController::ClientReceiveSpatialItems_Implementation(const TArray<F
 	{
 		return;
 	}
-
-	AVRegionClient* RegionClient = nullptr;
-	for (TActorIterator<AVRegionClient> It(World); It; ++It)
-	{
-		RegionClient = *It;
-		break;
-	}
-
-	if (RegionClient)
-	{
-		RegionClient->OnSpatialBatchReceived(Items, bHasMore);
-	}
 #endif
 }
 
@@ -408,18 +389,6 @@ void AVPlayerController::ClientReceiveMaterialsBatch_Implementation(const TArray
 	if (!World)
 	{
 		return;
-	}
-
-	AVRegionClient* RegionClient = nullptr;
-	for (TActorIterator<AVRegionClient> It(World); It; ++It)
-	{
-		RegionClient = *It;
-		break;
-	}
-
-	if (RegionClient)
-	{
-		RegionClient->OnMaterialsBatchReceived(Materials);
 	}
 
 	if (URegionClientSubsystem* RegionSubsystem = World->GetSubsystem<URegionClientSubsystem>())
