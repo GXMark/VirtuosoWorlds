@@ -16,13 +16,13 @@
 
 #if WITH_CLIENT_CODE
 #include "Subsystem/VAssetManager.h"
-#include "Subsystem/VRegionClientSubsystem.h"
+#include "Region/VRegionClient.h"
 #include "Region/VRegionClientBridge.h"
 #endif
 
 AVPlayerController::AVPlayerController()
 {
-	// Client streaming is handled by the region client subsystem.
+	// Client streaming is handled by the region client actor.
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
 	PrimaryActorTick.TickInterval = 0.f;
@@ -111,6 +111,12 @@ void AVPlayerController::BeginPlay()
 	if (GetNetMode() != NM_Client)
 		return;
 
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
 	if (IsLocalController())
 	{
 #if WITH_CLIENT_CODE
@@ -118,7 +124,7 @@ void AVPlayerController::BeginPlay()
 		UE_LOG(LogTemp, Log, TEXT("V I R T U O S O   C L I E N T"));
 		UE_LOG(LogTemp, Log, TEXT("============================================================================="));
 		
-		UVAssetManager* AssetManager = UVAssetManager::Get(GetWorld());
+		UVAssetManager* AssetManager = UVAssetManager::Get(World);
 		if (!AssetManager)
 		{
 			UE_LOG(LogTemp, Error, TEXT("Player Controller - Begin Play [ Cache Manager Not Found ]"));
@@ -129,6 +135,15 @@ void AVPlayerController::BeginPlay()
 			if (!AssetManager->Initialize(CachePath, false, TEXT("https://www.virtuosoworlds.com"), TEXT("tictactoe"), false))
 			{
 				UE_LOG(LogTemp, Error, TEXT("Player Controller - Begin Play [ Cache Manager Failed To Initialize ]"));
+			}
+		}
+
+		if (!RegionClient)
+		{
+			RegionClient = AVRegionClient::Get(this);
+			if (!RegionClient)
+			{
+				RegionClient = World->SpawnActor<AVRegionClient>();
 			}
 		}
 
@@ -389,9 +404,14 @@ void AVPlayerController::ClientReceiveMaterialsBatch_Implementation(const TArray
 		return;
 	}
 
-	if (URegionClientSubsystem* RegionSubsystem = World->GetSubsystem<URegionClientSubsystem>())
+	if (!RegionClient)
 	{
-		RegionSubsystem->OnMaterialsBatchReceived(Materials);
+		RegionClient = AVRegionClient::Get(World);
+	}
+
+	if (RegionClient)
+	{
+		RegionClient->OnMaterialsBatchReceived(Materials);
 	}
 #endif
 }
