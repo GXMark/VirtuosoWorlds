@@ -16,7 +16,6 @@
 
 #if WITH_CLIENT_CODE
 #include "Subsystem/VAssetManager.h"
-#if WITH_CLIENT_CODE
 #include "Subsystem/VRegionClientSubsystem.h"
 #include "Region/VRegionClientBridge.h"
 #endif
