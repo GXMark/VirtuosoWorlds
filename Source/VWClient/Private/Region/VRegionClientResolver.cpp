@@ -401,3 +401,8 @@ bool UVRegionClientResolver::IsItemUsingMaterial(const FGuid& ItemId, const FGui
 
 	return false;
 }
+
+int32 UVRegionClientResolver::GetPendingItemCount() const
+{
+	return DirtyItemIds.Num() + PendingDestroyItemIds.Num();
+}

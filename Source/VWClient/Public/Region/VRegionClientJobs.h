@@ -29,4 +29,5 @@ struct FVRegionClientJob
 	TWeakObjectPtr<AActor> Actor;
 	TArray<FVMMaterial> MaterialsBatch;
 	uint64 Sequence = 0;
+	double EnqueueTimeSeconds = 0.0;
 };
