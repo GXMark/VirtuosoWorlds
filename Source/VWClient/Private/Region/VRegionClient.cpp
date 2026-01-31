@@ -127,6 +127,11 @@ void AVRegionClient::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void AVRegionClient::OnMaterialsBatchReceived(const TArray<FVMMaterial>& Materials)
 {
+	FVRegionClientJob Job;
+	Job.JobType = EVRegionClientJobType::MaterialsBatchReceived;
+	Job.MaterialsBatch = Materials;
+	EnqueueJob(MoveTemp(Job));
+
 	if (MaterialResolver)
 	{
 		MaterialResolver->OnMaterialsBatchReceived(Materials);
@@ -167,6 +172,14 @@ void AVRegionClient::HandleSpatialActorPostInit(AActor* Actor, const FSpatialIte
 		return;
 	}
 
+	{
+		FVRegionClientJob Job;
+		Job.JobType = EVRegionClientJobType::SpatialActorObserved;
+		Job.ItemId = ItemId;
+		Job.Actor = Actor;
+		EnqueueJob(MoveTemp(Job));
+	}
+
 	RegisterActor(Actor, ItemId);
 	SyncVisualStateFromActor(Actor, ItemId);
 }
@@ -189,6 +202,15 @@ void AVRegionClient::HandleMeshAssetIdChanged(AActor* Actor, const FMeshAssetId&
 	State.bMeshPending = true;
 	State.bForceMaterialReapply = true;
 
+	{
+		FVRegionClientJob Job;
+		Job.JobType = EVRegionClientJobType::MeshAssetIdChanged;
+		Job.ItemId = ItemId;
+		Job.MeshAssetId = MeshAssetId;
+		Job.Actor = Actor;
+		EnqueueJob(MoveTemp(Job));
+	}
+
 	TryApplyMesh(ItemId, Actor, State);
 }
 
@@ -210,6 +232,15 @@ void AVRegionClient::HandleMaterialIdsChanged(AActor* Actor, const TArray<uint32
 	State.MaterialIdsBySlot = MaterialIds;
 	State.bMaterialsPending = true;
 	State.PendingMaterialSlots.Reset();
+
+	{
+		FVRegionClientJob Job;
+		Job.JobType = EVRegionClientJobType::MaterialIdsChanged;
+		Job.ItemId = ItemId;
+		Job.MaterialIdsBySlot = MaterialIds;
+		Job.Actor = Actor;
+		EnqueueJob(MoveTemp(Job));
+	}
 
 	const int32 NewCount = MaterialIds.Num();
 	const int32 OldCount = PreviousMaterialIds.Num();
@@ -244,6 +275,12 @@ void AVRegionClient::HandleActorDestroyed(AActor* Actor)
 	const TWeakObjectPtr<AActor> ActorKey(Actor);
 	if (const FGuid* ItemId = ActorToSpatialId.Find(ActorKey))
 	{
+		FVRegionClientJob Job;
+		Job.JobType = EVRegionClientJobType::ActorDestroyed;
+		Job.ItemId = *ItemId;
+		Job.Actor = Actor;
+		EnqueueJob(MoveTemp(Job));
+
 		SpatialItemActors.Remove(*ItemId);
 		VisualStates.Remove(*ItemId);
 		ActorToSpatialId.Remove(ActorKey);
@@ -259,6 +296,51 @@ void AVRegionClient::HandleActorDestroyed(AActor* Actor)
 			}
 		}
 	}
+}
+
+void AVRegionClient::EnqueueJob(FVRegionClientJob&& Job)
+{
+	const EVRegionClientJobType JobType = Job.JobType;
+	if (Job.Sequence == 0)
+	{
+		Job.Sequence = ++JobSequence;
+	}
+
+	if (ShouldCoalesceJob(JobType))
+	{
+		const FVRegionClientJobKey Key{Job.ItemId, JobType};
+		if (int32* ExistingIndex = CoalescedJobIndices.Find(Key))
+		{
+			JobQueue[*ExistingIndex] = MoveTemp(Job);
+		}
+		else
+		{
+			const int32 NewIndex = JobQueue.Add(MoveTemp(Job));
+			CoalescedJobIndices.Add(Key, NewIndex);
+		}
+	}
+	else
+	{
+		JobQueue.Add(MoveTemp(Job));
+	}
+
+	if (IsRegionClientDebugEnabled())
+	{
+		const FString ItemIdString = Job.ItemId.IsValid() ? Job.ItemId.ToString() : TEXT("None");
+		UE_LOG(
+			LogVRegionClient,
+			Log,
+			TEXT("AVRegionClient enqueued job type=%d item=%s queue_size=%d"),
+			static_cast<int32>(JobType),
+			*ItemIdString,
+			JobQueue.Num());
+	}
+}
+
+bool AVRegionClient::ShouldCoalesceJob(EVRegionClientJobType JobType) const
+{
+	return JobType == EVRegionClientJobType::MeshAssetIdChanged
+		|| JobType == EVRegionClientJobType::MaterialIdsChanged;
 }
 
 void AVRegionClient::RegisterActor(AActor* Actor, const FGuid& ItemId)
