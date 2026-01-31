@@ -7,7 +7,6 @@
 #include "RHI.h"
 #include "RendererInterface.h"
 #include "VPlayerState.h"
-#include "JsonObjectConverter.h"
 
 #if WITH_SERVER_CODE
 #include "VDataService.h"
@@ -87,12 +86,6 @@ void AVPlayerController::OnRep_PlayerState()
 	       *PState->UserID
 	);
 
-#if WITH_CLIENT_CODE
-	MaxSpatialDistance = PState->MaxSpatialDistance;
-	SpatialItemsReceived = 0;
-	bSpawnedAtSpatialThreshold = false;
-	UE_LOG(LogTemp, Log, TEXT("Client received MaxSpatialDistance=%.2f"), MaxSpatialDistance);
-#endif
 }
 
 void AVPlayerController::BeginPlay()
@@ -341,35 +334,12 @@ void AVPlayerController::ServerRequestSpatialItems_Implementation(const FVector&
 void AVPlayerController::ClientReceiveSpatialItems_Implementation(const TArray<FVMSpatialItemNet>& Items, bool bHasMore)
 {
 #if WITH_CLIENT_CODE
-	SpatialItemsReceived += Items.Num();
-	if (!bSpawnedAtSpatialThreshold && MaxSpatialDistance > 0.f
-		&& SpatialItemsReceived >= MaxSpatialDistance && IsLocalController())
-	{
-		bSpawnedAtSpatialThreshold = true;
-		ServerSpawnPlayer();
-	}
-
 	// Forward to the region client presenter.
 	UWorld* World = GetWorld();
 	if (!World)
 	{
 		return;
 	}
-#endif
-}
-
-float AVPlayerController::GetSpatialDistancePercent() const
-{
-#if WITH_CLIENT_CODE
-	if (MaxSpatialDistance <= 0.f)
-	{
-		return 0.f;
-	}
-
-	const float Percent = (static_cast<float>(SpatialItemsReceived) / MaxSpatialDistance) * 100.f;
-	return FMath::Clamp(Percent, 0.f, 100.f);
-#else
-	return 0.f;
 #endif
 }
 

@@ -14,14 +14,10 @@ public:
 	UPROPERTY(Replicated)
 	FString UserID;
 
-	UPROPERTY(Replicated)
-	float MaxSpatialDistance = 0.f;
-
 protected:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override
 	{
 		Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 		DOREPLIFETIME(AVPlayerState, UserID);
-		DOREPLIFETIME(AVPlayerState, MaxSpatialDistance);
 	}
 };

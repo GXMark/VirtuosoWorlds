@@ -208,8 +208,6 @@ void AVGameMode::PostLogin(APlayerController* NewPlayer)
 	{
 		if (AVPlayerState* PState = NewPlayer->GetPlayerState<AVPlayerState>())
 		{
-			PState->MaxSpatialDistance = DefaultMaxSpatialDistance;
-
 			const FUniqueNetIdRepl NetId = NewPlayer->PlayerState->GetUniqueId();
 
 			if (const FString* UserID = PendingUserIDs.Find(NetId))
