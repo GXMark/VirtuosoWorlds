@@ -71,7 +71,7 @@ void UVMaterialPresenterApplier::ApplyMaterialsInternal(
 				WeakComp,
 				Revision,
 				ClampedSlot));
-	}
+	};
 
 	if (Slots && Slots->Num() > 0)
 	{
