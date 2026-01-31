@@ -8,11 +8,10 @@
 #include "Model/Package/VMMaterial.h"
 
 #if WITH_CLIENT_CODE
+#include "Region/VRegionClient.h"
 #include "Region/VRegionClientBridgeEndpoint.h"
 class URegionClientBridge; // forward declare
 #endif
-
-class AVRegionClient;
 
 #if WITH_SERVER_CODE
 #include "Region/VRegionServerBridgeEndpoint.h"
