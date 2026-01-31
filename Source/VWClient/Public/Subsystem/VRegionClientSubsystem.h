@@ -51,12 +51,25 @@ private:
 	void RequestMaterialUpdates(const FGuid& ItemId, FSpatialActorVisualState& State);
 	void TryApplyMesh(const FGuid& ItemId, AActor* Actor, FSpatialActorVisualState& State);
 	void TryApplyMaterials(const FGuid& ItemId, AActor* Actor, FSpatialActorVisualState& State);
-	void OnMaterialResolved(UMaterialInstanceDynamic* Material, FGuid ItemId, int32 Revision, int32 SlotIndex);
+	void OnMaterialResolved(
+		UMaterialInstanceDynamic* Material,
+		uint32 MaterialId,
+		FGuid ItemId,
+		int32 Revision,
+		int32 SlotIndex);
 	FGuid ResolveMaterialGuid(uint32 MaterialId) const;
+	UMaterialInterface* ResolveMaterialById(
+		uint32 MaterialId,
+		const FGuid& ItemId,
+		int32 Revision,
+		int32 SlotIndex,
+		TArray<FGuid>& OutMaterialRequests);
 
 	TMap<FGuid, TWeakObjectPtr<AActor>> SpatialItemActors;
 	TMap<TWeakObjectPtr<AActor>, FGuid> ActorToSpatialId;
 	TMap<FGuid, FSpatialActorVisualState> VisualStates;
+	TMap<uint32, TObjectPtr<UMaterialInterface>> MaterialCacheById;
+	TSet<uint32> PendingMaterialDeliveries;
 
 	TObjectPtr<UVAssetManager> AssetManager = nullptr;
 	TObjectPtr<UVMaterialPresenter> MaterialPresenter = nullptr;
