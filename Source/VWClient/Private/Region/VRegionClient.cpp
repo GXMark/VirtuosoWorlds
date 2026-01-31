@@ -1,11 +1,13 @@
 #include "Region/VRegionClient.h"
 
 #include "Components/StaticMeshComponent.h"
+#include "Engine/Texture2D.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "HAL/IConsoleManager.h"
 #include "GameFramework/PlayerController.h"
 #include "Interface/VSpatialItemActorInterface.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "Presentation/VMaterialPresenterApplier.h"
 #include "Presentation/VMaterialResolver.h"
 #include "Region/VRegionClientBridge.h"
@@ -111,6 +113,12 @@ void AVRegionClient::BeginPlay()
 	MaterialIdsHandle = FSpatialActorEvents::OnSpatialActorMaterialIdsChanged().AddUObject(
 		this, &AVRegionClient::HandleMaterialIdsChanged);
 
+	if (AssetManager)
+	{
+		TextureReadyHandle = AssetManager->OnTextureParameterReady().AddUObject(
+			this, &AVRegionClient::HandleTextureParameterReady);
+	}
+
 	LogRegionClientDebugState(TEXT("BeginPlay"), RenderQueue.Num(), 0);
 }
 
@@ -127,6 +135,10 @@ void AVRegionClient::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	if (MaterialIdsHandle.IsValid())
 	{
 		FSpatialActorEvents::OnSpatialActorMaterialIdsChanged().Remove(MaterialIdsHandle);
+	}
+	if (TextureReadyHandle.IsValid() && AssetManager)
+	{
+		AssetManager->OnTextureParameterReady().Remove(TextureReadyHandle);
 	}
 
 	Super::EndPlay(EndPlayReason);
@@ -298,6 +310,41 @@ void AVRegionClient::HandleMaterialIdsChanged(AActor* Actor, const TArray<uint32
 		Job.Actor = Actor;
 		EnqueueJob(MoveTemp(Job));
 	}
+}
+
+void AVRegionClient::HandleTextureParameterReady(
+	const FGuid& MaterialId,
+	const FName& ParameterName,
+	const FGuid& TextureId,
+	UMaterialInstanceDynamic* MaterialInstance)
+{
+	if (!AssetManager || !RegionClientResolver)
+	{
+		return;
+	}
+
+	if (!MaterialId.IsValid() || !TextureId.IsValid())
+	{
+		return;
+	}
+
+	FVRegionRenderWorkItem WorkItem;
+	WorkItem.WorkType = EVRegionRenderWorkType::ApplyTextureParams;
+	WorkItem.ItemId = MaterialId;
+	WorkItem.MaterialId = MaterialId;
+	WorkItem.TextureId = TextureId;
+	WorkItem.TextureParameter = ParameterName;
+	WorkItem.MaterialInstance = MaterialInstance;
+
+	FGuid SourceItemId;
+	uint32 SourceGeneration = 0;
+	if (RegionClientResolver->FindItemUsingMaterial(MaterialId, SourceItemId, SourceGeneration))
+	{
+		WorkItem.SourceItemId = SourceItemId;
+		WorkItem.SourceGeneration = SourceGeneration;
+	}
+
+	RenderQueue.Enqueue(MoveTemp(WorkItem));
 }
 
 void AVRegionClient::HandleActorDestroyed(AActor* Actor)
@@ -531,6 +578,11 @@ bool AVRegionClient::ApplyRenderWork(const FVRegionRenderWorkItem& Item)
 		return false;
 	}
 
+	if (Item.WorkType == EVRegionRenderWorkType::ApplyTextureParams)
+	{
+		return ApplyTextureParamsWork(Item);
+	}
+
 	UVRegionClientResolver::FRegionClientItemSnapshot Snapshot;
 	if (!RegionClientResolver->GetItemSnapshot(Item.ItemId, Snapshot))
 	{
@@ -632,6 +684,63 @@ bool AVRegionClient::ApplyMaterialsWork(const FVRegionRenderWorkItem& Item, AAct
 	}
 
 	return false;
+}
+
+bool AVRegionClient::ApplyTextureParamsWork(const FVRegionRenderWorkItem& Item) const
+{
+	if (!RegionClientResolver || !AssetManager)
+	{
+		return false;
+	}
+
+	if (!Item.MaterialId.IsValid() || !Item.TextureId.IsValid())
+	{
+		return false;
+	}
+
+	bool bMaterialInUse = false;
+	if (Item.SourceItemId.IsValid())
+	{
+		bMaterialInUse = RegionClientResolver->IsItemUsingMaterial(
+			Item.SourceItemId,
+			Item.MaterialId,
+			Item.SourceGeneration);
+	}
+
+	if (!bMaterialInUse)
+	{
+		FGuid CurrentItemId;
+		uint32 CurrentGeneration = 0;
+		bMaterialInUse = RegionClientResolver->FindItemUsingMaterial(
+			Item.MaterialId,
+			CurrentItemId,
+			CurrentGeneration);
+	}
+
+	if (!bMaterialInUse)
+	{
+		return false;
+	}
+
+	UTexture2D* Texture = AssetManager->GetCachedTexture(Item.TextureId);
+	if (!Texture)
+	{
+		return false;
+	}
+
+	UMaterialInstanceDynamic* MaterialInstance = Item.MaterialInstance.Get();
+	if (UMaterialInstanceDynamic* CachedMaterial = AssetManager->GetCachedMaterialInstance(Item.MaterialId))
+	{
+		MaterialInstance = CachedMaterial;
+	}
+
+	if (!MaterialInstance)
+	{
+		return false;
+	}
+
+	MaterialInstance->SetTextureParameterValue(Item.TextureParameter, Texture);
+	return true;
 }
 
 bool AVRegionClient::ApplyLegacyFallback(

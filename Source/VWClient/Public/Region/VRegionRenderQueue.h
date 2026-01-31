@@ -5,6 +5,8 @@
 #include "Templates/Function.h"
 #include "VRegionRenderQueue.generated.h"
 
+class UMaterialInstanceDynamic;
+
 UENUM()
 enum class EVRegionRenderWorkType : uint8
 {
@@ -26,6 +28,12 @@ struct VWCLIENT_API FVRegionRenderWorkItem
 	TArray<uint32> MaterialIdsBySlot;
 	TMap<FName, float> ScalarTextureParameters;
 	TMap<FName, FLinearColor> VectorTextureParameters;
+	FGuid MaterialId;
+	FGuid TextureId;
+	FName TextureParameter;
+	FGuid SourceItemId;
+	uint32 SourceGeneration = 0;
+	TWeakObjectPtr<UMaterialInstanceDynamic> MaterialInstance;
 	FTransform Transform;
 	int32 Weight = 1;
 
