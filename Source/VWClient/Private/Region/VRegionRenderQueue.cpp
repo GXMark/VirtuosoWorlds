@@ -1,5 +1,7 @@
 #include "Region/VRegionRenderQueue.h"
 
+#include "HAL/PlatformTime.h"
+
 void FVRegionRenderWorkItem::RefreshWeight()
 {
 	Weight = CalculateWeight(WorkType);
@@ -27,6 +29,7 @@ int32 FVRegionRenderWorkItem::CalculateWeight(EVRegionRenderWorkType Type)
 void FVRegionRenderQueue::Enqueue(FVRegionRenderWorkItem&& Item)
 {
 	Item.RefreshWeight();
+	Item.EnqueueTimeSeconds = FPlatformTime::Seconds();
 
 	if (ShouldCoalesce(Item.WorkType))
 	{
@@ -98,6 +101,32 @@ void FVRegionRenderQueue::Drain(
 int32 FVRegionRenderQueue::Num() const
 {
 	return Queue.Num();
+}
+
+double FVRegionRenderQueue::GetAverageAgeSeconds(double NowSeconds) const
+{
+	if (Queue.IsEmpty())
+	{
+		return 0.0;
+	}
+
+	double TotalAgeSeconds = 0.0;
+	int32 CountedItems = 0;
+	for (const FVRegionRenderWorkItem& Item : Queue)
+	{
+		if (Item.EnqueueTimeSeconds > 0.0)
+		{
+			TotalAgeSeconds += FMath::Max(0.0, NowSeconds - Item.EnqueueTimeSeconds);
+			++CountedItems;
+		}
+	}
+
+	if (CountedItems == 0)
+	{
+		return 0.0;
+	}
+
+	return TotalAgeSeconds / static_cast<double>(CountedItems);
 }
 
 bool FVRegionRenderQueue::ShouldCoalesce(EVRegionRenderWorkType WorkType) const

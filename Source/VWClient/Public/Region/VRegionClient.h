@@ -89,6 +89,11 @@ private:
 		const FVRegionRenderWorkItem& Item,
 		AActor* Actor,
 		const UVRegionClientResolver::FRegionClientItemSnapshot& Snapshot);
+	void StartBurstWindow(const TCHAR* Reason);
+	bool IsBurstActive(double NowSeconds) const;
+	int32 GetEffectiveRenderBudget(double NowSeconds) const;
+	double GetAverageJobAgeSeconds(double NowSeconds) const;
+	void DumpQueueStats(const TCHAR* Context) const;
 
 	TMap<FGuid, TWeakObjectPtr<AActor>> SpatialItemActors;
 	TMap<TWeakObjectPtr<AActor>, FGuid> ActorToSpatialId;
@@ -97,6 +102,7 @@ private:
 	TMap<FVRegionClientJobKey, int32> CoalescedJobIndices;
 	uint64 JobSequence = 0;
 	FVRegionRenderQueue RenderQueue;
+	double BurstEndTimeSeconds = 0.0;
 
 	TObjectPtr<UVAssetManager> AssetManager = nullptr;
 	TObjectPtr<UVRegionClientResolver> RegionClientResolver = nullptr;

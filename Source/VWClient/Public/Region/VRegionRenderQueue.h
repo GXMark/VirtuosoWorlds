@@ -37,6 +37,7 @@ struct VWCLIENT_API FVRegionRenderWorkItem
 	TWeakObjectPtr<UMaterialInstanceDynamic> MaterialInstance;
 	FTransform Transform;
 	int32 Weight = 1;
+	double EnqueueTimeSeconds = 0.0;
 
 	void RefreshWeight();
 
@@ -53,6 +54,7 @@ public:
 		int32& OutBudgetRemaining,
 		const TFunctionRef<bool(const FVRegionRenderWorkItem&)>& ApplyWork);
 	int32 Num() const;
+	double GetAverageAgeSeconds(double NowSeconds) const;
 
 private:
 	struct FVRegionRenderWorkKey

@@ -2,9 +2,11 @@
 
 #include "Components/StaticMeshComponent.h"
 #include "Engine/Texture2D.h"
+#include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "HAL/IConsoleManager.h"
+#include "HAL/PlatformTime.h"
 #include "GameFramework/PlayerController.h"
 #include "Interface/VSpatialItemActorInterface.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -22,7 +24,7 @@ namespace
 {
 	TAutoConsoleVariable<int32> CVarRegionClientJobsPerTick(
 		TEXT("vw.regionclient.jobs_per_tick"),
-		64,
+		128,
 		TEXT("Jobs to process per tick for AVRegionClient."),
 		ECVF_Default);
 
@@ -30,6 +32,18 @@ namespace
 		TEXT("vw.regionclient.render_budget"),
 		40,
 		TEXT("Render budget for AVRegionClient."),
+		ECVF_Default);
+
+	TAutoConsoleVariable<int32> CVarRegionClientBurstBudget(
+		TEXT("vw.regionclient.burst_budget"),
+		0,
+		TEXT("Optional burst render budget for AVRegionClient during the initial burst window."),
+		ECVF_Default);
+
+	TAutoConsoleVariable<float> CVarRegionClientBurstSeconds(
+		TEXT("vw.regionclient.burst_seconds"),
+		0.0f,
+		TEXT("Duration in seconds to use the burst budget after BeginPlay or join events."),
 		ECVF_Default);
 
 	TAutoConsoleVariable<int32> CVarRegionClientDebug(
@@ -72,6 +86,67 @@ namespace
 			DrainedMaterialJobsThisTick,
 			RenderAppliedCount);
 	}
+
+	UWorld* GetRegionClientWorld()
+	{
+		if (!GEngine)
+		{
+			return nullptr;
+		}
+
+		for (const FWorldContext& Context : GEngine->GetWorldContexts())
+		{
+			UWorld* World = Context.World();
+			if (!World)
+			{
+				continue;
+			}
+
+			if (Context.WorldType == EWorldType::Game || Context.WorldType == EWorldType::PIE)
+			{
+				return World;
+			}
+		}
+
+		return GEngine->GetCurrentPlayWorld();
+	}
+
+	double GetRegionClientNowSeconds(const UWorld* /*World*/)
+	{
+		return FPlatformTime::Seconds();
+	}
+
+	void DumpRegionClientStats()
+	{
+#if UE_BUILD_SHIPPING
+		if (!IsRegionClientDebugEnabled())
+		{
+			UE_LOG(LogVRegionClient, Warning, TEXT("AVRegionClient stats require vw.regionclient.debug in shipping builds."));
+			return;
+		}
+#endif
+
+		UWorld* World = GetRegionClientWorld();
+		if (!World)
+		{
+			UE_LOG(LogVRegionClient, Warning, TEXT("AVRegionClient stats unavailable (no world)."));
+			return;
+		}
+
+		for (TActorIterator<AVRegionClient> It(World); It; ++It)
+		{
+			AVRegionClient* RegionClient = *It;
+			if (RegionClient)
+			{
+				RegionClient->DumpQueueStats(TEXT("Console"));
+			}
+		}
+	}
+
+	FAutoConsoleCommand CVarRegionClientDumpStats(
+		TEXT("vw.regionclient.dump_stats"),
+		TEXT("Dump AVRegionClient queue stats (pending items, queue sizes, average age)."),
+		FConsoleCommandDelegate::CreateStatic(&DumpRegionClientStats));
 } // namespace
 
 AVRegionClient::AVRegionClient()
@@ -119,6 +194,7 @@ void AVRegionClient::BeginPlay()
 			this, &AVRegionClient::HandleTextureParameterReady);
 	}
 
+	StartBurstWindow(TEXT("BeginPlay"));
 	LogRegionClientDebugState(TEXT("BeginPlay"), RenderQueue.Num(), 0);
 }
 
@@ -148,6 +224,7 @@ void AVRegionClient::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
+	const double NowSeconds = GetRegionClientNowSeconds(GetWorld());
 	const int32 JobsPerTick = CVarRegionClientJobsPerTick.GetValueOnGameThread();
 	const int32 JobsToDrain = FMath::Max(0, JobsPerTick);
 	const int32 QueueSizeBefore = JobQueue.Num();
@@ -186,7 +263,7 @@ void AVRegionClient::Tick(float DeltaSeconds)
 		RegionClientResolver->EmitRenderWork(RenderQueue, AssetManager);
 	}
 
-	const int32 RenderBudget = FMath::Max(0, CVarRegionClientRenderBudget.GetValueOnGameThread());
+	const int32 RenderBudget = GetEffectiveRenderBudget(NowSeconds);
 	int32 RenderAppliedCount = 0;
 	int32 RenderBudgetRemaining = RenderBudget;
 	RenderQueue.Drain(
@@ -246,6 +323,14 @@ void AVRegionClient::HandleSpatialActorPostInit(AActor* Actor, const FSpatialIte
 	if (!Actor || !GetWorld() || GetWorld()->GetNetMode() != NM_Client)
 	{
 		return;
+	}
+
+	if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+	{
+		if (Actor == PC->GetPawn())
+		{
+			StartBurstWindow(TEXT("PlayerPawnObserved"));
+		}
 	}
 
 	const FGuid ItemId = ResolveSpatialId(Actor, &SpatialId);
@@ -388,6 +473,10 @@ void AVRegionClient::EnqueueJob(FVRegionClientJob&& Job)
 	{
 		Job.Sequence = ++JobSequence;
 	}
+	if (Job.EnqueueTimeSeconds <= 0.0)
+	{
+		Job.EnqueueTimeSeconds = FPlatformTime::Seconds();
+	}
 
 	if (ShouldCoalesceJob(JobType))
 	{
@@ -418,6 +507,96 @@ void AVRegionClient::EnqueueJob(FVRegionClientJob&& Job)
 			*ItemIdString,
 			JobQueue.Num());
 	}
+}
+
+void AVRegionClient::StartBurstWindow(const TCHAR* Reason)
+{
+	const int32 BurstBudget = CVarRegionClientBurstBudget.GetValueOnGameThread();
+	const float BurstSeconds = CVarRegionClientBurstSeconds.GetValueOnGameThread();
+	if (BurstBudget <= 0 || BurstSeconds <= 0.0f)
+	{
+		return;
+	}
+
+	const double NowSeconds = GetRegionClientNowSeconds(GetWorld());
+	BurstEndTimeSeconds = NowSeconds + static_cast<double>(BurstSeconds);
+
+	if (IsRegionClientDebugEnabled())
+	{
+		UE_LOG(
+			LogVRegionClient,
+			Log,
+			TEXT("AVRegionClient burst start (%s) budget=%d duration=%.2fs"),
+			Reason,
+			BurstBudget,
+			BurstSeconds);
+	}
+}
+
+bool AVRegionClient::IsBurstActive(double NowSeconds) const
+{
+	return BurstEndTimeSeconds > 0.0 && NowSeconds <= BurstEndTimeSeconds;
+}
+
+int32 AVRegionClient::GetEffectiveRenderBudget(double NowSeconds) const
+{
+	const int32 DefaultBudget = FMath::Max(0, CVarRegionClientRenderBudget.GetValueOnGameThread());
+	const int32 BurstBudget = FMath::Max(0, CVarRegionClientBurstBudget.GetValueOnGameThread());
+	if (BurstBudget > 0 && IsBurstActive(NowSeconds))
+	{
+		return BurstBudget;
+	}
+
+	return DefaultBudget;
+}
+
+double AVRegionClient::GetAverageJobAgeSeconds(double NowSeconds) const
+{
+	if (JobQueue.IsEmpty())
+	{
+		return 0.0;
+	}
+
+	double TotalAgeSeconds = 0.0;
+	int32 CountedJobs = 0;
+	for (const FVRegionClientJob& Job : JobQueue)
+	{
+		if (Job.EnqueueTimeSeconds > 0.0)
+		{
+			TotalAgeSeconds += FMath::Max(0.0, NowSeconds - Job.EnqueueTimeSeconds);
+			++CountedJobs;
+		}
+	}
+
+	if (CountedJobs == 0)
+	{
+		return 0.0;
+	}
+
+	return TotalAgeSeconds / static_cast<double>(CountedJobs);
+}
+
+void AVRegionClient::DumpQueueStats(const TCHAR* Context) const
+{
+	const double NowSeconds = GetRegionClientNowSeconds(GetWorld());
+	const int32 PendingItems = RegionClientResolver ? RegionClientResolver->GetPendingItemCount() : 0;
+	const int32 JobQueueSize = JobQueue.Num();
+	const int32 RenderQueueSize = RenderQueue.Num();
+	const double AverageJobAgeSeconds = GetAverageJobAgeSeconds(NowSeconds);
+	const double AverageRenderAgeSeconds = RenderQueue.GetAverageAgeSeconds(NowSeconds);
+	const bool bBurstActive = IsBurstActive(NowSeconds);
+
+	UE_LOG(
+		LogVRegionClient,
+		Log,
+		TEXT("AVRegionClient[%s] pending_items=%d job_queue=%d render_queue=%d avg_job_age=%.2fs avg_render_age=%.2fs burst_active=%s"),
+		Context,
+		PendingItems,
+		JobQueueSize,
+		RenderQueueSize,
+		AverageJobAgeSeconds,
+		AverageRenderAgeSeconds,
+		bBurstActive ? TEXT("true") : TEXT("false"));
 }
 
 bool AVRegionClient::ShouldCoalesceJob(EVRegionClientJobType JobType) const
