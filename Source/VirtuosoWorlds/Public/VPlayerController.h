@@ -8,8 +8,8 @@
 #include "Model/Package/VMMaterial.h"
 
 #if WITH_CLIENT_CODE
-#include "Region/VRegionClient.h"
 #include "Region/VRegionClientBridgeEndpoint.h"
+class AVRegionClient;
 class URegionClientBridge; // forward declare
 #endif
 
@@ -20,7 +20,6 @@ class URegionServerBridge; // forward declare
 
 #include "VPlayerController.generated.h"
 
-class URegionServerBridge;
 class UInputMappingContext;
 
 /**
@@ -80,7 +79,6 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category="Spatial")
 	float GetSpatialDistancePercent() const;
-
 	
 protected:
 
@@ -124,14 +122,15 @@ private:
 	// Optional: server-side radius filter for spatial streaming (0 disables).
 	float SpatialStreamRadiusCm = 0.f;
 
-	UPROPERTY()
-	TObjectPtr<URegionServerBridge> RegionServerBridge;
+#if WITH_SERVER_CODE
+	TWeakObjectPtr<URegionServerBridge> RegionServerBridge;
+#endif
 
-	UPROPERTY()
-	TObjectPtr<AVRegionClient> RegionClient;
+#if WITH_CLIENT_CODE
+	TWeakObjectPtr<AVRegionClient> RegionClient;
+#endif
 
 	float MaxSpatialDistance = 0.f;
 	int32 SpatialItemsReceived = 0;
 	bool bSpawnedAtSpatialThreshold = false;
-
 };

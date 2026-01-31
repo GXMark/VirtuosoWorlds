@@ -138,10 +138,10 @@ void AVPlayerController::BeginPlay()
 			}
 		}
 
-		if (!RegionClient)
+		if (!RegionClient.IsValid())
 		{
 			RegionClient = AVRegionClient::Get(this);
-			if (!RegionClient)
+			if (!RegionClient.IsValid())
 			{
 				RegionClient = World->SpawnActor<AVRegionClient>();
 			}
@@ -385,7 +385,7 @@ void AVPlayerController::ServerRequestMaterialsBatch_Implementation(const TArray
 		return;
 	}
 
-	if (!RegionServerBridge)
+	if (!RegionServerBridge.IsValid())
 	{
 		RegionServerBridge = NewObject<URegionServerBridge>(this);
 		RegionServerBridge->Initialize(GetWorld());
@@ -404,12 +404,12 @@ void AVPlayerController::ClientReceiveMaterialsBatch_Implementation(const TArray
 		return;
 	}
 
-	if (!RegionClient)
+	if (!RegionClient.IsValid())
 	{
 		RegionClient = AVRegionClient::Get(World);
 	}
 
-	if (RegionClient)
+	if (RegionClient.IsValid() && RegionClient->IsValidLowLevel())
 	{
 		RegionClient->OnMaterialsBatchReceived(Materials);
 	}
