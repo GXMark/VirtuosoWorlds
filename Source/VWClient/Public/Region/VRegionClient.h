@@ -9,6 +9,7 @@
 
 class URegionClientBridge;
 class UVAssetManager;
+class UVRegionClientResolver;
 class UVMaterialPresenterApplier;
 class UVMaterialResolver;
 
@@ -82,6 +83,7 @@ private:
 	uint64 JobSequence = 0;
 
 	TObjectPtr<UVAssetManager> AssetManager = nullptr;
+	TObjectPtr<UVRegionClientResolver> RegionClientResolver = nullptr;
 	TObjectPtr<UVMaterialResolver> MaterialResolver = nullptr;
 	TObjectPtr<UVMaterialPresenterApplier> MaterialPresenter = nullptr;
 	TObjectPtr<URegionClientBridge> RegionBridge = nullptr;

@@ -9,6 +9,7 @@
 #include "Presentation/VMaterialPresenterApplier.h"
 #include "Presentation/VMaterialResolver.h"
 #include "Region/VRegionClientBridge.h"
+#include "Region/VRegionClientResolver.h"
 #include "Subsystem/VAssetManager.h"
 #include "Utility/VSpatialActorEvents.h"
 
@@ -91,6 +92,9 @@ void AVRegionClient::BeginPlay()
 		RegionBridge->Initialize(PC);
 	}
 
+	RegionClientResolver = NewObject<UVRegionClientResolver>(this);
+	RegionClientResolver->Initialize(AssetManager);
+
 	MaterialResolver = NewObject<UVMaterialResolver>(this);
 	MaterialResolver->Initialize(AssetManager, RegionBridge);
 
@@ -133,9 +137,16 @@ void AVRegionClient::Tick(float DeltaSeconds)
 	const int32 JobsToDrain = FMath::Max(0, JobsPerTick);
 	const int32 QueueSizeBefore = JobQueue.Num();
 	const int32 JobsDrainedThisTick = FMath::Min(QueueSizeBefore, JobsToDrain);
+	TArray<FVRegionClientJob> DrainedJobs;
 
 	if (JobsDrainedThisTick > 0)
 	{
+		DrainedJobs.Reserve(JobsDrainedThisTick);
+		for (int32 Index = 0; Index < JobsDrainedThisTick; ++Index)
+		{
+			DrainedJobs.Add(MoveTemp(JobQueue[Index]));
+		}
+
 		JobQueue.RemoveAt(0, JobsDrainedThisTick, EAllowShrinking::No);
 		CoalescedJobIndices.Reset();
 		for (int32 Index = 0; Index < JobQueue.Num(); ++Index)
@@ -144,6 +155,14 @@ void AVRegionClient::Tick(float DeltaSeconds)
 			{
 				CoalescedJobIndices.Add({JobQueue[Index].ItemId, JobQueue[Index].JobType}, Index);
 			}
+		}
+	}
+
+	if (RegionClientResolver)
+	{
+		for (const FVRegionClientJob& Job : DrainedJobs)
+		{
+			RegionClientResolver->ConsumeJob(Job);
 		}
 	}
 
