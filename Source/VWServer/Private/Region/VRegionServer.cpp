@@ -34,7 +34,7 @@ void AVRegionServer::UpsertSpatialItem(const FVMSpatialItemNet& Item)
 		return;
 	}
 
-	const FSpatialItemId ItemId = Item.ItemID.Value;
+	const FGuid ItemId = Item.ItemID.Value;
 	if (!ItemId.IsValid())
 	{
 		return;
@@ -65,7 +65,7 @@ void AVRegionServer::UpsertSpatialItem(const FVMSpatialItemNet& Item)
 	}
 }
 
-void AVRegionServer::RemoveSpatialItem(const FSpatialItemId& ItemId)
+void AVRegionServer::RemoveSpatialItem(const FGuid& ItemId)
 {
 	if (!HasAuthority() || !ItemId.IsValid())
 	{
@@ -91,7 +91,7 @@ void AVRegionServer::RemoveSpatialItem(const FSpatialItemId& ItemId)
 	}
 }
 
-void AVRegionServer::UpdateConnectionRelevancy(UNetConnection* Connection, const TSet<FSpatialItemId>& RelevantItems)
+void AVRegionServer::UpdateConnectionRelevancy(UNetConnection* Connection, const TSet<FGuid>& RelevantItems)
 {
 	if (!HasAuthority())
 	{
@@ -130,7 +130,7 @@ AVSpatialItemActor* AVRegionServer::SpawnSpatialItemActor(const FVMSpatialItemNe
 	return Actor;
 }
 
-void AVRegionServer::RegisterSpatialItemActor(AVSpatialItemActor* Actor, const FSpatialItemId& ItemId)
+void AVRegionServer::RegisterSpatialItemActor(AVSpatialItemActor* Actor, const FGuid& ItemId)
 {
 	if (!Actor || !HasAuthority())
 	{

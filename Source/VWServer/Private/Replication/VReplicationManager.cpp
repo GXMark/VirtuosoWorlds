@@ -3,7 +3,7 @@
 #include "Engine/NetConnection.h"
 #include "GameFramework/Actor.h"
 
-void UVReplicationManager::RegisterSpatialItemActor(AActor* Actor, const FSpatialItemId& Id)
+void UVReplicationManager::RegisterSpatialItemActor(AActor* Actor, const FGuid& Id)
 {
 	if (!Actor || !Id.IsValid())
 	{
@@ -13,7 +13,7 @@ void UVReplicationManager::RegisterSpatialItemActor(AActor* Actor, const FSpatia
 	RegisteredActors.Add(Id, Actor);
 }
 
-void UVReplicationManager::UnregisterSpatialItemActor(const FSpatialItemId& Id)
+void UVReplicationManager::UnregisterSpatialItemActor(const FGuid& Id)
 {
 	if (!Id.IsValid())
 	{
@@ -40,7 +40,7 @@ void UVReplicationManager::UnregisterSpatialItemActor(AActor* Actor)
 	}
 }
 
-void UVReplicationManager::SetConnectionRelevancy(UNetConnection* Connection, const TSet<FSpatialItemId>& Relevant)
+void UVReplicationManager::SetConnectionRelevancy(UNetConnection* Connection, const TSet<FGuid>& Relevant)
 {
 	if (!Connection)
 	{
@@ -52,7 +52,7 @@ void UVReplicationManager::SetConnectionRelevancy(UNetConnection* Connection, co
 	ConnectionRelevancy.FindOrAdd(Key) = Relevant;
 }
 
-void UVReplicationManager::AddRelevant(UNetConnection* Connection, const TSet<FSpatialItemId>& Relevant)
+void UVReplicationManager::AddRelevant(UNetConnection* Connection, const TSet<FGuid>& Relevant)
 {
 	if (!Connection)
 	{
@@ -61,11 +61,11 @@ void UVReplicationManager::AddRelevant(UNetConnection* Connection, const TSet<FS
 
 	PruneInvalidConnections();
 	const TWeakObjectPtr<UNetConnection> Key(Connection);
-	TSet<FSpatialItemId>& Existing = ConnectionRelevancy.FindOrAdd(Key);
+	TSet<FGuid>& Existing = ConnectionRelevancy.FindOrAdd(Key);
 	Existing.Append(Relevant);
 }
 
-void UVReplicationManager::RemoveRelevant(UNetConnection* Connection, const TSet<FSpatialItemId>& Relevant)
+void UVReplicationManager::RemoveRelevant(UNetConnection* Connection, const TSet<FGuid>& Relevant)
 {
 	if (!Connection)
 	{
@@ -74,19 +74,19 @@ void UVReplicationManager::RemoveRelevant(UNetConnection* Connection, const TSet
 
 	PruneInvalidConnections();
 	const TWeakObjectPtr<UNetConnection> Key(Connection);
-	TSet<FSpatialItemId>* Existing = ConnectionRelevancy.Find(Key);
+	TSet<FGuid>* Existing = ConnectionRelevancy.Find(Key);
 	if (!Existing)
 	{
 		return;
 	}
 
-	for (const FSpatialItemId& Id : Relevant)
+	for (const FGuid& Id : Relevant)
 	{
 		Existing->Remove(Id);
 	}
 }
 
-bool UVReplicationManager::IsSpatialItemRelevantForConnection(const FSpatialItemId& Id, const UNetConnection* Connection) const
+bool UVReplicationManager::IsSpatialItemRelevantForConnection(const FGuid& Id, const UNetConnection* Connection) const
 {
 	if (!Connection || !Id.IsValid())
 	{
@@ -94,7 +94,7 @@ bool UVReplicationManager::IsSpatialItemRelevantForConnection(const FSpatialItem
 	}
 
 	const TWeakObjectPtr<UNetConnection> Key(const_cast<UNetConnection*>(Connection));
-	const TSet<FSpatialItemId>* Relevant = ConnectionRelevancy.Find(Key);
+	const TSet<FGuid>* Relevant = ConnectionRelevancy.Find(Key);
 	return Relevant && Relevant->Contains(Id);
 }
 
@@ -109,7 +109,7 @@ bool UVReplicationManager::HasConnectionRelevancy(const UNetConnection* Connecti
 	return ConnectionRelevancy.Contains(Key);
 }
 
-AActor* UVReplicationManager::FindActorForId(const FSpatialItemId& Id) const
+AActor* UVReplicationManager::FindActorForId(const FGuid& Id) const
 {
 	if (!Id.IsValid())
 	{

@@ -18,19 +18,19 @@ public:
 
 	void LoadSpatialItems(const TArray<FVMSpatialItemNet>& Items);
 	void UpsertSpatialItem(const FVMSpatialItemNet& Item);
-	void RemoveSpatialItem(const FSpatialItemId& ItemId);
-	void UpdateConnectionRelevancy(UNetConnection* Connection, const TSet<FSpatialItemId>& RelevantItems);
+	void RemoveSpatialItem(const FGuid& ItemId);
+	void UpdateConnectionRelevancy(UNetConnection* Connection, const TSet<FGuid>& RelevantItems);
 
 protected:
 	virtual void BeginPlay() override;
 
 private:
 	AVSpatialItemActor* SpawnSpatialItemActor(const FVMSpatialItemNet& Item);
-	void RegisterSpatialItemActor(AVSpatialItemActor* Actor, const FSpatialItemId& ItemId);
+	void RegisterSpatialItemActor(AVSpatialItemActor* Actor, const FGuid& ItemId);
 
 	UPROPERTY()
-	TMap<FSpatialItemId, FVMSpatialItemNet> SpatialItemState;
+	TMap<FGuid, FVMSpatialItemNet> SpatialItemState;
 
 	UPROPERTY()
-	TMap<FSpatialItemId, TObjectPtr<AVSpatialItemActor>> SpatialItemActors;
+	TMap<FGuid, TObjectPtr<AVSpatialItemActor>> SpatialItemActors;
 };
