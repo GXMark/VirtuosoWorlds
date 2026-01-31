@@ -63,8 +63,10 @@ AVPlayerController::AVPlayerController()
 #if WITH_CLIENT_CODE
 void AVPlayerController::ClientRequestSpatialItems(const FVector& Origin, int32 MaxItems)
 {
-	// Called by AVRegionClient via URegionBridge / IVRegionBridgeEndpoint.
-	ServerRequestSpatialItems(Origin, MaxItems);
+	// Client-driven spatial item requests are disabled; server pushes via replication only.
+	UE_LOG(LogTemp, Verbose, TEXT("PlayerController: ClientRequestSpatialItems ignored (server-authoritative)."));
+	(void)Origin;
+	(void)MaxItems;
 }
 
 void AVPlayerController::ClientRequestMaterialsBatch(const TArray<FGuid>& MaterialIds)
@@ -328,18 +330,10 @@ void AVPlayerController::ServerSendCollisionsBatch(const TArray<FVMCollision>& C
 void AVPlayerController::ServerRequestSpatialItems_Implementation(const FVector& Origin, int32 MaxItems)
 {
 #if WITH_SERVER_CODE
-	if (!HasAuthority())
-	{
-		return;
-	}
-
-	if (!RegionServerBridge)
-	{
-		RegionServerBridge = NewObject<URegionServerBridge>(this);
-		RegionServerBridge->Initialize(GetWorld());
-	}
-
-	RegionServerBridge->HandleSpatialRequest(this, Origin, MaxItems);
+	// Client-driven spatial item requests are disabled; server pushes via replication only.
+	UE_LOG(LogTemp, Verbose, TEXT("PlayerController: ServerRequestSpatialItems ignored (server-authoritative)."));
+	(void)Origin;
+	(void)MaxItems;
 #else
 	ClientReceiveSpatialItems(TArray<FVMSpatialItemNet>(), false);
 #endif
