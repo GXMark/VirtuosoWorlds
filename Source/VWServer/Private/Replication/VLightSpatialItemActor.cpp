@@ -1,5 +1,4 @@
 #include "Replication/VLightSpatialItemActor.h"
-
 #include "Components/DirectionalLightComponent.h"
 #include "Components/LightComponent.h"
 #include "Components/PointLightComponent.h"
@@ -72,12 +71,10 @@ void AVLightSpatialItemActor::ApplyLightState()
 	UpdateActiveLightComponent();
 }
 
-void AVLightSpatialItemActor::ApplyCommonLightSettings(ULightComponentBase* LightComp) const
+void AVLightSpatialItemActor::ApplyCommonLightSettings(ULightComponent* LightComp) const
 {
 	if (!LightComp)
-	{
 		return;
-	}
 
 	LightComp->SetIntensity(LightState.Intensity);
 	LightComp->SetLightColor(LightState.Color);
@@ -85,26 +82,23 @@ void AVLightSpatialItemActor::ApplyCommonLightSettings(ULightComponentBase* Ligh
 	LightComp->SetUseTemperature(true);
 	LightComp->SetCastShadows(LightState.bCastShadows);
 	LightComp->bCastVolumetricShadow = LightState.bCastVolumetricShadow;
-	LightComp->SetVolumetricScatteringIntensity(LightState.bVolumetric ? 1.0f : 0.0f);
+	LightComp->VolumetricScatteringIntensity = LightState.bVolumetric ? 1.0f : 0.0f;
 	ApplyLightingChannels(LightComp);
 	LightComp->MarkRenderStateDirty();
 }
 
-void AVLightSpatialItemActor::ApplyLightingChannels(ULightComponentBase* LightComp) const
+void AVLightSpatialItemActor::ApplyLightingChannels(ULightComponent* LightComp) const
 {
 	if (!LightComp)
-	{
 		return;
-	}
 
-	FLightingChannels Channels;
-	Channels.bChannel0 = (LightState.LightingChannels & 0x1) != 0;
-	Channels.bChannel1 = (LightState.LightingChannels & 0x2) != 0;
-	Channels.bChannel2 = (LightState.LightingChannels & 0x4) != 0;
-	LightComp->SetLightingChannels(Channels);
+	LightComp->SetLightingChannels(
+		(LightState.LightingChannels & 0x1) != 0,
+		(LightState.LightingChannels & 0x2) != 0,
+		(LightState.LightingChannels & 0x4) != 0);
 }
 
-void AVLightSpatialItemActor::UpdateActiveLightComponent()
+void AVLightSpatialItemActor::UpdateActiveLightComponent() const
 {
 	PointLightComp->SetVisibility(LightState.Type == EVMRepLightType::Point, true);
 	SpotLightComp->SetVisibility(LightState.Type == EVMRepLightType::Spot, true);

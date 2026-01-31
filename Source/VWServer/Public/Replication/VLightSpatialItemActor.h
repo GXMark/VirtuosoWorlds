@@ -32,25 +32,25 @@ public:
 private:
 	static FTransform ToTransform(const FVMTransformNet& InTransform);
 	void ApplyLightState();
-	void ApplyCommonLightSettings(ULightComponentBase* LightComp) const;
-	void ApplyLightingChannels(ULightComponentBase* LightComp) const;
-	void UpdateActiveLightComponent();
+	void ApplyCommonLightSettings(ULightComponent* LightComp) const;
+	void ApplyLightingChannels(ULightComponent* LightComp) const;
+	void UpdateActiveLightComponent() const;
 
 	UFUNCTION()
 	void OnRep_LightState();
 
-	UPROPERTY(VisibleAnywhere, Category = "Spatial Item", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY()
 	TObjectPtr<USceneComponent> RootComp;
 
-	UPROPERTY(VisibleAnywhere, Category = "Spatial Item", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UPointLightComponent> PointLightComp;
 
-	UPROPERTY(VisibleAnywhere, Category = "Spatial Item", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<USpotLightComponent> SpotLightComp;
 
-	UPROPERTY(VisibleAnywhere, Category = "Spatial Item", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UDirectionalLightComponent> DirectionalLightComp;
 
-	UPROPERTY(ReplicatedUsing = OnRep_LightState, Category = "Spatial Item")
+	UPROPERTY(ReplicatedUsing = OnRep_LightState)
 	FVMRepLightSpatialItem LightState;
 };

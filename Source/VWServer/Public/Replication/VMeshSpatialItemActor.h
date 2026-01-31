@@ -32,24 +32,24 @@ private:
 	UFUNCTION()
 	void OnRep_SpatialTransform();
 
-	UPROPERTY(VisibleAnywhere, Category = "Spatial Item", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY()
 	TObjectPtr<UStaticMeshComponent> MeshComp;
 
-	UPROPERTY(Replicated, Category = "Spatial Item")
+	UPROPERTY(Replicated)
 	FSpatialItemId SpatialItemId;
 
-	UPROPERTY(ReplicatedUsing = OnRep_SpatialTransform, Category = "Spatial Item")
+	UPROPERTY(ReplicatedUsing = OnRep_SpatialTransform)
 	FVMTransformNet ReplicatedTransform;
 
-	UPROPERTY(Replicated, Category = "Spatial Item")
+	UPROPERTY(Replicated)
 	FMeshAssetId MeshAssetId;
 
-	UPROPERTY(Replicated, Category = "Spatial Item")
+	UPROPERTY(Replicated)
 	TArray<uint32> MaterialIdsBySlot;
 
-	UPROPERTY(Replicated, Category = "Spatial Item")
+	UPROPERTY(Replicated)
 	bool bHasFlags = false;
 
-	UPROPERTY(Replicated, Category = "Spatial Item")
+	UPROPERTY(Replicated)
 	uint8 Flags = 0;
 };
