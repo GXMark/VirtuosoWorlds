@@ -73,6 +73,7 @@ private:
 	FVector SpatialOrigin = FVector::ZeroVector;
 	// When player moves farther than this from SpatialOrigin, request priority recenters.
 	float SpatialRecenterDistanceCm = 5000.f;
+	
 	// Optional: only stream spatial items within this radius. Set <= 0 to disable.
 	// If we move while a request is in flight, defer the recenter until the response arrives.
 	bool bSpatialRecenterPending = false;
