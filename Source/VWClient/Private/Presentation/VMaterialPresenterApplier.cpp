@@ -67,8 +67,6 @@ void UVMaterialPresenterApplier::HandleMaterialResolved(
 	int32 Revision,
 	int32 SlotIndex)
 {
-	UE_UNUSED(MaterialId);
-
 	if (!MeshComp.IsValid() || !Material)
 	{
 		return;

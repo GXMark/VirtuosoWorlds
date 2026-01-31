@@ -44,8 +44,8 @@ private:
 	void RegisterActor(AActor* Actor, const FGuid& ItemId);
 	FGuid ResolveSpatialId(AActor* Actor, const FSpatialItemId* SpatialIdOverride = nullptr);
 	void SyncVisualStateFromActor(AActor* Actor, const FGuid& ItemId);
-	void TryApplyMesh(const FGuid& ItemId, AActor* Actor, FSpatialActorVisualState& State);
-	void TryApplyMaterials(const FGuid& ItemId, AActor* Actor, FSpatialActorVisualState& State);
+	void TryApplyMesh(const FGuid& ItemId, AActor* Actor, FSpatialActorVisualState& State) const;
+	void TryApplyMaterials(const FGuid& ItemId, AActor* Actor, FSpatialActorVisualState& State) const;
 
 	TMap<FGuid, TWeakObjectPtr<AActor>> SpatialItemActors;
 	TMap<TWeakObjectPtr<AActor>, FGuid> ActorToSpatialId;

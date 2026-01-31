@@ -221,10 +221,8 @@ void URegionClientSubsystem::SyncVisualStateFromActor(AActor* Actor, const FGuid
 	}
 }
 
-void URegionClientSubsystem::TryApplyMesh(const FGuid& ItemId, AActor* Actor, FSpatialActorVisualState& State)
+void URegionClientSubsystem::TryApplyMesh(const FGuid& ItemId, AActor* Actor, FSpatialActorVisualState& State) const
 {
-	UE_UNUSED(ItemId);
-
 	if (!Actor || !AssetManager)
 	{
 		return;
@@ -253,10 +251,8 @@ void URegionClientSubsystem::TryApplyMesh(const FGuid& ItemId, AActor* Actor, FS
 	}
 }
 
-void URegionClientSubsystem::TryApplyMaterials(const FGuid& ItemId, AActor* Actor, FSpatialActorVisualState& State)
+void URegionClientSubsystem::TryApplyMaterials(const FGuid& ItemId, AActor* Actor, FSpatialActorVisualState& State) const
 {
-	UE_UNUSED(ItemId);
-
 	if (!Actor || !MaterialPresenter)
 	{
 		return;
