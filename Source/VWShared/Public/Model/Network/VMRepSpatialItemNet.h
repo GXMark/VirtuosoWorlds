@@ -5,12 +5,12 @@
 #include "Model/Network/VMTransformNet.h"
 #include "VMRepSpatialItemNet.generated.h"
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct VWSHARED_API FSpatialItemId
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	FVMGuidNet Value;
 
 	FSpatialItemId()
@@ -43,12 +43,12 @@ struct TStructOpsTypeTraits<FSpatialItemId> : public TStructOpsTypeTraitsBase2<F
 	};
 };
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct VWSHARED_API FMeshAssetId
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	FVMGuidNet Value;
 
 	FMeshAssetId()
@@ -81,12 +81,12 @@ struct TStructOpsTypeTraits<FMeshAssetId> : public TStructOpsTypeTraitsBase2<FMe
 	};
 };
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct VWSHARED_API FMaterialId
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	uint32 Value = 0;
 
 	bool NetSerialize(FArchive& Ar, UPackageMap* Map, bool& bOutSuccess)
@@ -113,33 +113,33 @@ struct TStructOpsTypeTraits<FMaterialId> : public TStructOpsTypeTraitsBase2<FMat
 	};
 };
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct VWSHARED_API FVMRepMeshSpatialItem
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	FSpatialItemId Id;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	FVMTransformNet Transform;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	FMeshAssetId MeshAssetId;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	TArray<FMaterialId> MaterialIdsBySlot;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	bool bHasFlags = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	uint8 Flags = 0;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	bool bHasParent = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	FSpatialItemId ParentId;
 
 	bool NetSerialize(FArchive& Ar, UPackageMap* Map, bool& bOutSuccess)
@@ -300,7 +300,7 @@ struct TStructOpsTypeTraits<FVMRepMeshSpatialItem> : public TStructOpsTypeTraits
 	};
 };
 
-UENUM(BlueprintType)
+UENUM()
 enum class EVMRepLightType : uint8
 {
 	Point UMETA(DisplayName="Point"),
@@ -308,54 +308,54 @@ enum class EVMRepLightType : uint8
 	Directional UMETA(DisplayName="Directional")
 };
 
-USTRUCT(BlueprintType)
+USTRUCT()
 struct VWSHARED_API FVMRepLightSpatialItem
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	FSpatialItemId Id;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	FVMTransformNet Transform;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	EVMRepLightType Type = EVMRepLightType::Point;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	float Intensity = 0.f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	FColor Color = FColor::Black;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	float Temperature = 6500.f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	float AttenuationRadius = 0.f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	float InnerConeAngle = 0.f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	float OuterConeAngle = 0.f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	bool bCastShadows = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	bool bCastVolumetricShadow = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	uint8 LightingChannels = 0;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	bool bVolumetric = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	bool bHasIesProfileId = false;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	FMeshAssetId IesProfileId;
 
 private:
