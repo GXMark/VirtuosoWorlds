@@ -8,9 +8,8 @@
 
 class URegionClientBridge;
 class UVAssetManager;
-class UVMaterialPresenter;
-class UMaterialInterface;
-class UMaterialInstanceDynamic;
+class UVMaterialPresenterApplier;
+class UVMaterialResolver;
 
 USTRUCT()
 struct FSpatialActorVisualState
@@ -19,9 +18,6 @@ struct FSpatialActorVisualState
 
 	FMeshAssetId MeshAssetId;
 	TArray<uint32> MaterialIdsBySlot;
-	TArray<TObjectPtr<UMaterialInterface>> ResolvedMaterials;
-	int32 PendingMaterialRequests = 0;
-	int32 MaterialRevision = 0;
 	bool bMeshPending = true;
 	bool bMaterialsPending = true;
 };
@@ -48,31 +44,16 @@ private:
 	void RegisterActor(AActor* Actor, const FGuid& ItemId);
 	FGuid ResolveSpatialId(AActor* Actor, const FSpatialItemId* SpatialIdOverride = nullptr);
 	void SyncVisualStateFromActor(AActor* Actor, const FGuid& ItemId);
-	void RequestMaterialUpdates(const FGuid& ItemId, FSpatialActorVisualState& State);
 	void TryApplyMesh(const FGuid& ItemId, AActor* Actor, FSpatialActorVisualState& State);
 	void TryApplyMaterials(const FGuid& ItemId, AActor* Actor, FSpatialActorVisualState& State);
-	void OnMaterialResolved(
-		UMaterialInstanceDynamic* Material,
-		uint32 MaterialId,
-		FGuid ItemId,
-		int32 Revision,
-		int32 SlotIndex);
-	FGuid ResolveMaterialGuid(uint32 MaterialId) const;
-	UMaterialInterface* ResolveMaterialById(
-		uint32 MaterialId,
-		const FGuid& ItemId,
-		int32 Revision,
-		int32 SlotIndex,
-		TArray<FGuid>& OutMaterialRequests);
 
 	TMap<FGuid, TWeakObjectPtr<AActor>> SpatialItemActors;
 	TMap<TWeakObjectPtr<AActor>, FGuid> ActorToSpatialId;
 	TMap<FGuid, FSpatialActorVisualState> VisualStates;
-	TMap<uint32, TObjectPtr<UMaterialInterface>> MaterialCacheById;
-	TSet<uint32> PendingMaterialDeliveries;
 
 	TObjectPtr<UVAssetManager> AssetManager = nullptr;
-	TObjectPtr<UVMaterialPresenter> MaterialPresenter = nullptr;
+	TObjectPtr<UVMaterialResolver> MaterialResolver = nullptr;
+	TObjectPtr<UVMaterialPresenterApplier> MaterialPresenter = nullptr;
 	TObjectPtr<URegionClientBridge> RegionBridge = nullptr;
 
 	FDelegateHandle PostInitHandle;
