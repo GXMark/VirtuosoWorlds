@@ -151,15 +151,14 @@ void UVRegionResolver::GetResolvedBundles(int32 MaxResolvedBundlesPerTick, TArra
 		if (Item->PayloadType == ESpatialItemType::Mesh || Item->PayloadType == ESpatialItemType::Decal)
 		{
 			Bundle.Materials.Reserve(Instance->MaterialIds.Num());
-			if (AssetManager.IsValid() && AssetManager->MaterialAgent)
+			for (const FGuid& MatId : Instance->MaterialIds)
 			{
-				for (const FGuid& MatId : Instance->MaterialIds)
+				UMaterialInterface* Material = nullptr;
+				if (MatId.IsValid() && AssetManager.IsValid() && AssetManager->MaterialAgent)
 				{
-					if (UMaterialInterface* Material = AssetManager->MaterialAgent->GetMaterial(MatId))
-					{
-						Bundle.Materials.Add(Material);
-					}
+					Material = AssetManager->MaterialAgent->GetMaterial(MatId);
 				}
+				Bundle.Materials.Add(Material);
 			}
 			Bundle.bTexturesReady = AreTexturesReady(*Instance);
 		}
@@ -194,12 +193,10 @@ void UVRegionResolver::UpdateOrCreateInstance(const FVMSpatialItemNet& Item)
 
 	if (Item.PayloadType == ESpatialItemType::Mesh)
 	{
+		Instance.MaterialIds.Reserve(Item.MeshPayload.material_ids.Num());
 		for (const FVMGuidNet& MatNet : Item.MeshPayload.material_ids)
 		{
-			if (MatNet.Value.IsValid())
-			{
-				Instance.MaterialIds.Add(MatNet.Value);
-			}
+			Instance.MaterialIds.Add(MatNet.Value.IsValid() ? MatNet.Value : FGuid());
 		}
 		const FGuid MeshId = Item.MeshPayload.mesh_ref.id.Value;
 		if (MeshId.IsValid() && !RequestedMeshIds.Contains(MeshId))
@@ -235,6 +232,11 @@ void UVRegionResolver::UpdateTextureDependencies(FResolvedSpatialInstance& Insta
 
 	for (const FGuid& MatId : Instance.MaterialIds)
 	{
+		if (!MatId.IsValid())
+		{
+			continue;
+		}
+
 		FVMMaterial MaterialItem;
 		if (!AssetManager->MaterialAgent->GetMaterialItem(MatId, MaterialItem))
 		{
