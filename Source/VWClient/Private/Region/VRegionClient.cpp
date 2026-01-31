@@ -206,11 +206,6 @@ void AVRegionClient::OnMaterialsBatchReceived(const TArray<FVMMaterial>& Materia
 	Job.JobType = EVRegionClientJobType::MaterialsBatchReceived;
 	Job.MaterialsBatch = Materials;
 	EnqueueJob(MoveTemp(Job));
-
-	if (MaterialResolver)
-	{
-		MaterialResolver->OnMaterialsBatchReceived(Materials);
-	}
 }
 
 AVRegionClient* AVRegionClient::Get(const UObject* WorldContext)

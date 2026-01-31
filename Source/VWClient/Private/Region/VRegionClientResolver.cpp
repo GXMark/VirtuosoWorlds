@@ -125,6 +125,48 @@ void UVRegionClientResolver::ConsumeJob(const FVRegionClientJob& Job)
 			{
 				AssetManager->SubmitMaterialItems(Job.MaterialsBatch);
 			}
+			if (Job.MaterialsBatch.IsEmpty())
+			{
+				break;
+			}
+
+			TSet<FGuid> UpdatedMaterials;
+			UpdatedMaterials.Reserve(Job.MaterialsBatch.Num());
+			for (const FVMMaterial& MaterialItem : Job.MaterialsBatch)
+			{
+				if (MaterialItem.id.IsValid())
+				{
+					UpdatedMaterials.Add(MaterialItem.id);
+				}
+			}
+
+			if (UpdatedMaterials.IsEmpty())
+			{
+				break;
+			}
+
+			for (auto& ItemPair : ItemStates)
+			{
+				const FGuid& ItemId = ItemPair.Key;
+				FRegionClientItemState& State = ItemPair.Value;
+				bool bUsesUpdatedMaterial = false;
+				for (const uint32 MaterialId : State.DesiredMaterialIdsBySlot)
+				{
+					const FGuid MaterialGuid = ResolveMaterialGuid(MaterialId);
+					if (MaterialGuid.IsValid() && UpdatedMaterials.Contains(MaterialGuid))
+					{
+						bUsesUpdatedMaterial = true;
+						break;
+					}
+				}
+
+				if (bUsesUpdatedMaterial)
+				{
+					State.AppliedMask &= ~kAppliedMaterialsMask;
+					State.LegacyFallbackMask &= ~kFallbackMaterialsMask;
+					DirtyItemIds.Add(ItemId);
+				}
+			}
 			break;
 		}
 		default:
