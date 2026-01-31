@@ -81,7 +81,7 @@ void AVRegionClient::BeginPlay()
 
 	// Start streaming on the local client.
 	bSpatialStreamActive = true;
-	bSpatialHasMore = true;
+	bSpatialHasMore = false;
 	bSpatialRequestInFlight = false;
 
 	if (APawn* P = CachedPawn.Get())
@@ -221,8 +221,9 @@ void AVRegionClient::RequestNextSpatialBatch()
 		return;
 	}
 
-	bSpatialRequestInFlight = true;
-	RegionBridge->RequestSpatialItems(SpatialOrigin, MaxSpatialItemsPerRequest);
+	UE_LOG(LogTemp, Verbose, TEXT("RegionClient: Spatial item requests are disabled on the client."));
+	bSpatialRequestInFlight = false;
+	bSpatialHasMore = false;
 }
 
 void AVRegionClient::OnMaterialsBatchReceived(const TArray<FVMMaterial>& Materials)

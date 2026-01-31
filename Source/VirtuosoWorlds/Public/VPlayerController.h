@@ -66,7 +66,7 @@ public:
 	void ServerSpawnPlayer();
 
 
-	// Spatial streaming (Client-driven)
+	// Spatial streaming (server-authoritative)
 	UFUNCTION(Server, Reliable)
 	void ServerRequestSpatialItems(const FVector& Origin, int32 MaxItems);
 
