@@ -3,6 +3,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
+#include "HAL/IConsoleManager.h"
 #include "GameFramework/PlayerController.h"
 #include "Interface/VSpatialItemActorInterface.h"
 #include "Presentation/VMaterialPresenterApplier.h"
@@ -10,6 +11,62 @@
 #include "Region/VRegionClientBridge.h"
 #include "Subsystem/VAssetManager.h"
 #include "Utility/VSpatialActorEvents.h"
+
+DEFINE_LOG_CATEGORY_STATIC(LogVRegionClient, Log, All);
+
+namespace
+{
+	TAutoConsoleVariable<int32> CVarRegionClientJobsPerTick(
+		TEXT("vw.regionclient.jobs_per_tick"),
+		64,
+		TEXT("Jobs to process per tick for AVRegionClient."),
+		ECVF_Default);
+
+	TAutoConsoleVariable<int32> CVarRegionClientRenderBudget(
+		TEXT("vw.regionclient.render_budget"),
+		40,
+		TEXT("Render budget for AVRegionClient."),
+		ECVF_Default);
+
+	TAutoConsoleVariable<int32> CVarRegionClientDebug(
+		TEXT("vw.regionclient.debug"),
+		0,
+		TEXT("Enable debug logging for AVRegionClient."),
+		ECVF_Default);
+
+	bool IsRegionClientDebugEnabled()
+	{
+		return CVarRegionClientDebug.GetValueOnGameThread() != 0;
+	}
+
+	void LogRegionClientDebugState(const TCHAR* Context)
+	{
+		if (!IsRegionClientDebugEnabled())
+		{
+			return;
+		}
+
+		const int32 JobsPerTick = CVarRegionClientJobsPerTick.GetValueOnGameThread();
+		const int32 RenderBudget = CVarRegionClientRenderBudget.GetValueOnGameThread();
+
+		const int32 PendingMeshQueueSize = 0;
+		const int32 PendingMaterialQueueSize = 0;
+		const int32 DrainedMeshJobsThisTick = 0;
+		const int32 DrainedMaterialJobsThisTick = 0;
+
+		UE_LOG(
+			LogVRegionClient,
+			Log,
+			TEXT("AVRegionClient[%s] CVar jobs_per_tick=%d render_budget=%d | Queues(mesh=%d material=%d) | Drain(mesh=%d material=%d)"),
+			Context,
+			JobsPerTick,
+			RenderBudget,
+			PendingMeshQueueSize,
+			PendingMaterialQueueSize,
+			DrainedMeshJobsThisTick,
+			DrainedMaterialJobsThisTick);
+	}
+} // namespace
 
 AVRegionClient::AVRegionClient()
 {
@@ -46,6 +103,8 @@ void AVRegionClient::BeginPlay()
 		this, &AVRegionClient::HandleMeshAssetIdChanged);
 	MaterialIdsHandle = FSpatialActorEvents::OnSpatialActorMaterialIdsChanged().AddUObject(
 		this, &AVRegionClient::HandleMaterialIdsChanged);
+
+	LogRegionClientDebugState(TEXT("BeginPlay"));
 }
 
 void AVRegionClient::EndPlay(const EEndPlayReason::Type EndPlayReason)
