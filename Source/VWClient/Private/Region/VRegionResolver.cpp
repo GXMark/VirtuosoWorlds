@@ -72,21 +72,6 @@ void UVRegionResolver::OnMaterialsBatchReceived(const TArray<FVMMaterial>& Mater
 	bMaterialRequestInFlight = false;
 }
 
-void UVRegionResolver::OnCollisionsBatchReceived(const TArray<FVMCollision>& Collisions)
-{
-	for (const FVMCollision& Col : Collisions)
-	{
-		if (!Col.id.IsValid())
-		{
-			continue;
-		}
-		PendingCollisions.Add(Col.id, Col);
-		RequestedCollisionIds.Remove(Col.id);
-	}
-
-	bCollisionRequestInFlight = false;
-}
-
 void UVRegionResolver::OnSpatialItemRemoved(const FGuid& ItemId)
 {
 	RemovedItemIds.Add(ItemId);
@@ -192,15 +177,6 @@ void UVRegionResolver::GetResolvedBundles(int32 MaxResolvedBundlesPerTick, TArra
 			Bundle.bTexturesReady = AreTexturesReady(*Instance);
 		}
 
-		if (Instance->CollisionId.IsValid())
-		{
-			if (const FVMCollision* Collision = PendingCollisions.Find(Instance->CollisionId))
-			{
-				Bundle.bHasCollision = true;
-				Bundle.CollisionData = *Collision;
-			}
-		}
-
 		OutBundles.Add(Bundle);
 		Instance->bIssued = true;
 		IssuedItemIds.Add(ItemId);
@@ -226,7 +202,6 @@ void UVRegionResolver::UpdateOrCreateInstance(const FVMSpatialItemNet& Item)
 	FResolvedSpatialInstance& Instance = ResolvedInstances.FindOrAdd(ItemId);
 	Instance.SpatialId = ItemId;
 	Instance.PayloadType = Item.PayloadType;
-	Instance.CollisionId = Item.CollisionID.Value;
 	Instance.SpatialItem = Item;
 	Instance.MaterialIds.Reset();
 
@@ -338,37 +313,6 @@ void UVRegionResolver::IssueDependencyRequests()
 			RegionBridge->RequestMaterialsBatch(MaterialBatch);
 		}
 	}
-
-	if (!bCollisionRequestInFlight)
-	{
-		TArray<FGuid> CollisionBatch;
-		for (TPair<FGuid, FResolvedSpatialInstance>& Pair : ResolvedInstances)
-		{
-			FResolvedSpatialInstance& Instance = Pair.Value;
-			const FGuid ColId = Instance.CollisionId;
-			if (!ColId.IsValid() || RequestedCollisionIds.Contains(ColId))
-			{
-				continue;
-			}
-			if (PendingCollisions.Contains(ColId))
-			{
-				continue;
-			}
-			Instance.bRequestedCollision = true;
-			RequestedCollisionIds.Add(ColId);
-			CollisionBatch.Add(ColId);
-			if (CollisionBatch.Num() >= MaxCollisionItemLimit)
-			{
-				break;
-			}
-		}
-
-		if (CollisionBatch.Num() > 0)
-		{
-			bCollisionRequestInFlight = true;
-			RegionBridge->RequestCollisionsBatch(CollisionBatch);
-		}
-	}
 }
 
 bool UVRegionResolver::AreMaterialsReady(const FResolvedSpatialInstance& Instance) const
@@ -429,15 +373,6 @@ bool UVRegionResolver::IsMeshReady(const FResolvedSpatialInstance& Instance) con
 	return AssetManager->IsMemoryCached(MeshId, FVAssetType::Mesh);
 }
 
-bool UVRegionResolver::IsCollisionReady(const FResolvedSpatialInstance& Instance) const
-{
-	if (!Instance.CollisionId.IsValid())
-	{
-		return true;
-	}
-	return PendingCollisions.Contains(Instance.CollisionId);
-}
-
 bool UVRegionResolver::CanRender(const FResolvedSpatialInstance& Instance) const
 {
 	if (Instance.PayloadType == ESpatialItemType::Mesh)
@@ -453,9 +388,6 @@ bool UVRegionResolver::CanRender(const FResolvedSpatialInstance& Instance) const
 
 bool UVRegionResolver::CanActivate(const FResolvedSpatialInstance& Instance) const
 {
-	if (Instance.CollisionId.IsValid())
-	{
-		return IsCollisionReady(Instance);
-	}
+	(void)Instance;
 	return true;
 }

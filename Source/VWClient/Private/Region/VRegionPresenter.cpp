@@ -1,6 +1,5 @@
 #include "Region/VRegionPresenter.h"
 
-#include "Presentation/VCollisionPresenter.h"
 #include "Presentation/VDecalPresenter.h"
 #include "Presentation/VLightPresenter.h"
 #include "Presentation/VMaterialPresenter.h"
@@ -14,14 +13,12 @@ void UVRegionPresenter::Initialize(
 	UVMaterialPresenter* InMaterialPresenter,
 	UVLightPresenter* InLightPresenter,
 	UVDecalPresenter* InDecalPresenter,
-	UVCollisionPresenter* InCollisionPresenter,
 	UVSpatialItemComponentRegistry* InItemRegistry)
 {
 	MeshPresenter = InMeshPresenter;
 	MaterialPresenter = InMaterialPresenter;
 	LightPresenter = InLightPresenter;
 	DecalPresenter = InDecalPresenter;
-	CollisionPresenter = InCollisionPresenter;
 	ItemRegistry = InItemRegistry;
 }
 
@@ -51,10 +48,6 @@ void UVRegionPresenter::ReleaseItem(const FGuid& ItemId)
 	if (DecalPresenter.IsValid())
 	{
 		DecalPresenter->DestroyItem(ItemId);
-	}
-	if (CollisionPresenter.IsValid())
-	{
-		CollisionPresenter->OnItemRemoved(ItemId);
 	}
 	if (ItemRegistry.IsValid())
 	{
@@ -133,11 +126,4 @@ void UVRegionPresenter::PresentBundle(const FResolvedItemBundle& Bundle)
 		break;
 	}
 
-	if (Bundle.bHasCollision && CollisionPresenter.IsValid())
-	{
-		TArray<FVMCollision> CollisionDefs;
-		CollisionDefs.Add(Bundle.CollisionData);
-		CollisionPresenter->SubmitCollisionDefs(CollisionDefs);
-		CollisionPresenter->PresentCollision(Bundle.ItemId, Bundle.WorldTransform, Bundle.CollisionData.id);
-	}
 }

@@ -18,7 +18,6 @@ public class VWClient : ModuleRules
             {
                 "CoreUObject",
                 "Engine",
-                "ProceduralMeshComponent",
                 "RenderCore",
                 "RHI",
                 "PakFile",

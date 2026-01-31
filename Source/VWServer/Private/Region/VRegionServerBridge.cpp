@@ -7,7 +7,6 @@
 #include "Model/Package/VMActor.h"
 #include "Model/Constant/VConstants.h"
 #include "Model/Package/VMMaterial.h"
-#include "Model/Package/VMCollision.h"
 
 #include "JsonObjectConverter.h"
 
@@ -300,49 +299,5 @@ void URegionServerBridge::HandleMaterialsRequest(
 	if (IVRegionServerBridgeEndpoint* Endpoint = Cast<IVRegionServerBridgeEndpoint>(PC))
 	{
 		Endpoint->ServerSendMaterialsBatch(Results);
-	}
-}
-
-void URegionServerBridge::HandleCollisionsRequest(
-	APlayerController* PC,
-	const TArray<FGuid>& CollisionIds) const
-{
-	if (!World)
-	{
-		return;
-	}
-
-	UVDataService* DataService = UVDataService::Get(World);
-	if (!DataService)
-	{
-		return;
-	}
-
-	TArray<FVMCollision> Results;
-	Results.Reserve(CollisionIds.Num());
-
-	for (const FGuid& Id : CollisionIds)
-	{
-		if (!Id.IsValid())
-		{
-			continue;
-		}
-
-		const FString Json = DataService->GetCollision(Id.ToString());
-		if (Json.IsEmpty())
-		{
-			continue;
-		}
-
-		FVMCollision Col;
-		if (FJsonObjectConverter::JsonObjectStringToUStruct(Json, &Col, 0, 0))
-		{
-			Results.Add(Col);
-		}
-	}
-
-	if (IVRegionServerBridgeEndpoint* Endpoint = Cast<IVRegionServerBridgeEndpoint>(PC))
-	{
-		Endpoint->ServerSendCollisionsBatch(Results);
 	}
 }

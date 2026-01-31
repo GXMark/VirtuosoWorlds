@@ -7,8 +7,7 @@
 // These types are used in interface method signatures and must be fully defined
 // in any translation unit that includes this header (e.g., UHT-generated code).
 /*#include "VWShared/Public/Model/Network/VMSpatialItemNet.h"
-#include "VWShared/Public/Model/Package/VMMaterial.h"
-#include "VWShared/Public/Model/Package/VMCollision.h"*/
+#include "VWShared/Public/Model/Package/VMMaterial.h"*/
 
 #include "VRegionClientBridgeEndpoint.generated.h"
 
@@ -34,6 +33,4 @@ public:
 	/** Request a batch of material items by id. */
 	virtual void ClientRequestMaterialsBatch(const TArray<FGuid>& MaterialIds) = 0;
 
-	/** Request a batch of collision items by id. */
-	virtual void ClientRequestCollisionsBatch(const TArray<FGuid>& CollisionIds) = 0;
 };

@@ -5,7 +5,6 @@
 #include "Region/VRegionResolver.h"
 #include "VRegionPresenter.generated.h"
 
-class UVCollisionPresenter;
 class UVDecalPresenter;
 class UVLightPresenter;
 class UVMaterialPresenter;
@@ -23,7 +22,6 @@ public:
 		UVMaterialPresenter* InMaterialPresenter,
 		UVLightPresenter* InLightPresenter,
 		UVDecalPresenter* InDecalPresenter,
-		UVCollisionPresenter* InCollisionPresenter,
 		UVSpatialItemComponentRegistry* InItemRegistry);
 
 	void Commit(const TArray<FResolvedItemBundle>& Bundles);
@@ -34,7 +32,6 @@ private:
 	TWeakObjectPtr<UVMaterialPresenter> MaterialPresenter;
 	TWeakObjectPtr<UVLightPresenter> LightPresenter;
 	TWeakObjectPtr<UVDecalPresenter> DecalPresenter;
-	TWeakObjectPtr<UVCollisionPresenter> CollisionPresenter;
 	TWeakObjectPtr<UVSpatialItemComponentRegistry> ItemRegistry;
 
 	void PresentBundle(const FResolvedItemBundle& Bundle);

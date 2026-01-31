@@ -7,7 +7,7 @@
 #include "VRegionClientBridge.generated.h"
 
 /**
- * Region bridge used by AVRegionClient to issue spatial/material/collision requests through the owning controller.
+ * Region bridge used by AVRegionClient to issue spatial/material requests through the owning controller.
  *
  * This keeps VWClient independent of the VirtuosoWorlds module.
  */
@@ -23,7 +23,6 @@ public:
 
 	void RequestSpatialItems(const FVector& Origin, int32 MaxItems) const;
 	void RequestMaterialsBatch(const TArray<FGuid>& MaterialIds) const;
-	void RequestCollisionsBatch(const TArray<FGuid>& CollisionIds) const;
 
 private:
 	UPROPERTY()

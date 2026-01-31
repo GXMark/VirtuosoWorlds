@@ -6,7 +6,6 @@
 #include "GameFramework/Actor.h"
 #include "Model/Network/VMSpatialItemNet.h"
 #include "Model/Package/VMMaterial.h"
-#include "Model/Package/VMCollision.h"
 #include "Region/VRegionPresenter.h"
 #include "Region/VRegionResolver.h"
 #include "Region/VRegionClientBridge.h"
@@ -18,7 +17,6 @@ class UVLightPresenter;
 class UVMaterialPresenter;
 class UVMeshPresenter;
 class UVAssetManager;
-class UVCollisionPresenter;
 class UVRegionResolver;
 class UVRegionPresenter;
 class UVSpatialItemComponentRegistry;
@@ -62,9 +60,6 @@ private:
 	TObjectPtr<UVDecalPresenter> DecalPresenter;
 
 	UPROPERTY()
-	TObjectPtr<UVCollisionPresenter> CollisionPresenter;
-
-	UPROPERTY()
 	TObjectPtr<UVSpatialItemComponentRegistry> ItemRegistry;
 
 	UPROPERTY()
@@ -102,14 +97,9 @@ private:
 
 	TArray<TArray<FVMSpatialItemNet>> PendingSpatialBatches;
 	TArray<TArray<FVMMaterial>> PendingMaterialBatches;
-	TArray<TArray<FVMCollision>> PendingCollisionBatches;
-
 public:
 	// Called by the local player controller when a material batch response arrives.
 	void OnMaterialsBatchReceived(const TArray<FVMMaterial>& Materials);
-
-	// Called by the local player controller when a collision batch response arrives.
-	void OnCollisionsBatchReceived(const TArray<FVMCollision>& Collisions);
 
 	// Called when a spatial item unloads.
 	void OnSpatialItemRemoved(const FGuid& ItemId) const;

@@ -6,7 +6,6 @@
 // Types used in UFUNCTION / interface signatures must be fully defined before *.generated.h
 #include "Model/Network/VMSpatialItemNet.h"
 #include "Model/Package/VMMaterial.h"
-#include "Model/Package/VMCollision.h"
 
 #if WITH_CLIENT_CODE
 #include "Region/VRegionClientBridgeEndpoint.h"
@@ -45,14 +44,12 @@ public:
     // IVRegionClientBridgeEndpoint
     virtual void ClientRequestSpatialItems(const FVector& Origin, int32 MaxItems) override;
     virtual void ClientRequestMaterialsBatch(const TArray<FGuid>& MaterialIds) override;
-    virtual void ClientRequestCollisionsBatch(const TArray<FGuid>& CollisionIds) override;
 #endif
 
 #if WITH_SERVER_CODE
 	// IVRegionServerBridgeEndpoint
 	virtual void ServerSendSpatialItems(const TArray<FVMSpatialItemNet>& Items, bool bHasMore) override;
 	virtual void ServerSendMaterialsBatch(const TArray<FVMMaterial>& Materials) override;
-	virtual void ServerSendCollisionsBatch(const TArray<FVMCollision>& Collisions) override;
 #endif
 
 	// RPC Contract
@@ -79,13 +76,6 @@ public:
 
 	UFUNCTION(Client, Reliable)
 	void ClientReceiveMaterialsBatch(const TArray<FVMMaterial>& Materials);
-
-	// Collisions (batched)
-	UFUNCTION(Server, Reliable)
-	void ServerRequestCollisionsBatch(const TArray<FGuid>& CollisionIds);
-
-	UFUNCTION(Client, Reliable)
-	void ClientReceiveCollisionsBatch(const TArray<FVMCollision>& Collisions);
 
 	UFUNCTION(BlueprintCallable, Category="Spatial")
 	float GetSpatialDistancePercent() const;

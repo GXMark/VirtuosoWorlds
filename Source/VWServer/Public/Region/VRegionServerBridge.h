@@ -6,7 +6,6 @@
 #include "Model/Network/VMSpatialItemNet.h"
 #include "Model/Package/VMActor.h"
 #include "Model/Package/VMMaterial.h"
-#include "Model/Package/VMCollision.h"
 #include "Model/Package/VMDecalComponent.h"
 #include "Model/Package/VMMeshComponent.h"
 #include "Model/Package/VMPointLightComponent.h"
@@ -39,11 +38,6 @@ public:
 	void HandleMaterialsRequest(
 		APlayerController* PC,
 		const TArray<FGuid>& MaterialIds) const;
-
-	// Collisions
-	void HandleCollisionsRequest(
-		APlayerController* PC,
-		const TArray<FGuid>& CollisionIds) const;
 
 private:
 	UPROPERTY()
