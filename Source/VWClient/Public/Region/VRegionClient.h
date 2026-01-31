@@ -1,10 +1,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameFramework/Actor.h"
 #include "Model/Package/VMMaterial.h"
 #include "Model/Network/VMRepSpatialItemNet.h"
-#include "Subsystems/WorldSubsystem.h"
-#include "VRegionClientSubsystem.generated.h"
+#include "VRegionClient.generated.h"
 
 class URegionClientBridge;
 class UVAssetManager;
@@ -25,15 +25,19 @@ struct FSpatialActorVisualState
 };
 
 UCLASS()
-class VWCLIENT_API URegionClientSubsystem : public UWorldSubsystem
+class VWCLIENT_API AVRegionClient : public AActor
 {
 	GENERATED_BODY()
 
 public:
-	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
-	virtual void Deinitialize() override;
+	AVRegionClient();
+
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	void OnMaterialsBatchReceived(const TArray<FVMMaterial>& Materials);
+
+	static AVRegionClient* Get(const UObject* WorldContext);
 
 private:
 	void HandleSpatialActorPostInit(AActor* Actor, const FSpatialItemId& SpatialId);
