@@ -32,8 +32,12 @@ public:
 	virtual UStaticMeshComponent* GetSpatialMeshComponent() const override;
 
 private:
+	static bool IsStaticItem(const FVMRepMeshSpatialItem& InItem);
+	static bool HasTransformChanged(const FVMTransformNet& Current, const FVMTransformNet& Incoming);
+	static bool HasMaterialIdsChanged(const TArray<uint32>& Current, const TArray<FMaterialId>& Incoming);
 	static FTransform ToTransform(const FVMTransformNet& InTransform);
 	void ApplyTransform();
+	void ApplyDormancyFromItem(const FVMRepMeshSpatialItem& InItem, bool bForceWake);
 
 	UFUNCTION()
 	void OnRep_SpatialTransform();
@@ -64,4 +68,7 @@ private:
 
 	UPROPERTY(Replicated)
 	uint8 Flags = 0;
+
+	UPROPERTY()
+	bool bIsStaticMeshItem = false;
 };
