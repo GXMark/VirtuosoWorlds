@@ -7,7 +7,6 @@
 #include "Region/VRegionClientBridge.h"
 #include "Components/SceneComponent.h"
 #include "Engine/World.h"
-#include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 
 AVRegionClient::AVRegionClient()
@@ -48,7 +47,6 @@ void AVRegionClient::BeginPlay()
 	{
 		RegionBridge = NewObject<URegionClientBridge>(this, TEXT("RegionBridge"));
 		RegionBridge->Initialize(PC);
-		CachedPawn = PC->GetPawn();
 	}
 
 	RegionResolver = NewObject<UVRegionResolver>(this);
@@ -58,16 +56,6 @@ void AVRegionClient::BeginPlay()
 	RegionPresenter->Initialize(
 		MeshPresenter,
 		MaterialPresenter);
-
-	// Start streaming on the local client.
-	bSpatialStreamActive = true;
-	bSpatialHasMore = false;
-	bSpatialRequestInFlight = false;
-
-	if (APawn* P = CachedPawn.Get())
-	{
-		SpatialOrigin = P->GetActorLocation();
-	}
 }
 
 void AVRegionClient::Tick(float DeltaSeconds)
@@ -78,41 +66,6 @@ void AVRegionClient::Tick(float DeltaSeconds)
 	if (GetNetMode() != NM_Client)
 	{
 		return;
-	}
-
-	if (!bSpatialStreamActive)
-	{
-		return;
-	}
-
-	// Determine current player position.
-	FVector CurrentPos = SpatialOrigin;
-	APawn* Pawn = CachedPawn.Get();
-	if (!Pawn)
-	{
-		if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
-		{
-			Pawn = PC->GetPawn();
-			CachedPawn = Pawn;
-		}
-	}
-	if (Pawn)
-	{
-		CurrentPos = Pawn->GetActorLocation();
-	}
-
-	// Movement-based streaming: if the player moved far enough, recenter the stream.
-	const float RecenterDistSq = FMath::Square(FMath::Max(0.f, SpatialRecenterDistanceCm));
-	if (RecenterDistSq > 0.f && FVector::DistSquared(CurrentPos, SpatialOrigin) > RecenterDistSq)
-	{
-		// If a request is in-flight, defer the recenter until we get the response.
-		bSpatialRecenterPending = bSpatialRequestInFlight;
-		PendingSpatialOrigin = CurrentPos;
-		if (!bSpatialRequestInFlight)
-		{
-			SpatialOrigin = CurrentPos;
-			bSpatialHasMore = true;
-		}
 	}
 
 	if (RegionResolver)
@@ -137,83 +90,15 @@ void AVRegionClient::Tick(float DeltaSeconds)
 		RegionResolver->GetResolvedBundles(MaxResolvedBundlesPerTick, Bundles);
 		RegionPresenter->Commit(Bundles);
 	}
-
-	// If a request is in-flight, wait for the response before doing more.
-	if (bSpatialRequestInFlight)
-	{
-		return;
-	}
-
-	// If the server told us there is no more data for the current stream, stop unless we recenter.
-	if (!bSpatialHasMore)
-	{
-		return;
-	}
-
-	RequestNextSpatialBatch();
 }
 
 void AVRegionClient::OnSpatialBatchReceived(const TArray<FVMSpatialItemNet>& Items, bool bHasMore)
 {
-	bSpatialRequestInFlight = false;
-	bSpatialHasMore = bHasMore;
-
-	// If we deferred a recenter while a request was in-flight, apply it now and restart the stream.
-	if (bSpatialRecenterPending)
-	{
-		bSpatialRecenterPending = false;
-		if (!PendingSpatialOrigin.IsNearlyZero())
-		{
-			SpatialOrigin = PendingSpatialOrigin;
-		}
-		PendingSpatialOrigin = FVector::ZeroVector;
-		bSpatialHasMore = true;
-	}
-
+	(void)bHasMore;
 	PendingSpatialBatches.Add(Items);
-}
-
-void AVRegionClient::SetSpatialStreamingEnabled(bool bEnabled)
-{
-	bSpatialStreamActive = bEnabled;
-	if (bSpatialStreamActive)
-	{
-		bSpatialHasMore = true;
-	}
-}
-
-void AVRegionClient::RequestNextSpatialBatch()
-{
-	UWorld* World = GetWorld();
-	if (!World)
-	{
-		return;
-	}
-
-	if (!RegionBridge || !RegionBridge->IsValidBridge())
-	{
-		UE_LOG(LogTemp, Error, TEXT("RegionClient: RegionBridge is not valid"));
-		return;
-	}
-
-	UE_LOG(LogTemp, Verbose, TEXT("RegionClient: Spatial item requests are disabled on the client."));
-	bSpatialRequestInFlight = false;
-	bSpatialHasMore = false;
 }
 
 void AVRegionClient::OnMaterialsBatchReceived(const TArray<FVMMaterial>& Materials)
 {
 	PendingMaterialBatches.Add(Materials);
-}
-
-void AVRegionClient::OnSpatialItemRemoved(const FGuid& ItemId) const
-{
-	if (RegionResolver)
-	{
-		RegionResolver->OnSpatialItemRemoved(ItemId);
-	}
-	if (RegionPresenter)
-	{
-		RegionPresenter->ReleaseItem(ItemId);
-	}
 }

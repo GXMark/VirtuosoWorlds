@@ -23,7 +23,7 @@ void UVRegionResolver::OnSpatialBatchReceived(const TArray<FVMSpatialItemNet>& I
 		{
 			continue;
 		}
-		if (RemovedItemIds.Contains(ItemId) || IssuedItemIds.Contains(ItemId))
+		if (IssuedItemIds.Contains(ItemId))
 		{
 			continue;
 		}
@@ -72,21 +72,8 @@ void UVRegionResolver::OnMaterialsBatchReceived(const TArray<FVMMaterial>& Mater
 	bMaterialRequestInFlight = false;
 }
 
-void UVRegionResolver::OnSpatialItemRemoved(const FGuid& ItemId)
-{
-	RemovedItemIds.Add(ItemId);
-	PendingSpatialData.Remove(ItemId);
-	ResolvedInstances.Remove(ItemId);
-	SpatialOrder.Remove(ItemId);
-	IssuedItemIds.Remove(ItemId);
-}
-
 bool UVRegionResolver::IsBundleReady(const FGuid& ItemId) const
 {
-	if (RemovedItemIds.Contains(ItemId))
-	{
-		return false;
-	}
 	if (!PendingSpatialData.Contains(ItemId))
 	{
 		return false;
