@@ -5,6 +5,7 @@
 #include "Components/SceneComponent.h"
 #include "Components/SpotLightComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "Utility/VSpatialActorEvents.h"
 
 AVLightSpatialItemActor::AVLightSpatialItemActor()
 {
@@ -58,6 +59,23 @@ UPointLightComponent* AVLightSpatialItemActor::GetPointLightComponent() const
 USpotLightComponent* AVLightSpatialItemActor::GetSpotLightComponent() const
 {
 	return SpotLightComp;
+}
+
+void AVLightSpatialItemActor::PostNetInit()
+{
+	Super::PostNetInit();
+
+	if (GetNetMode() != NM_Client)
+	{
+		return;
+	}
+
+	FSpatialActorEvents::OnSpatialActorPostInit().Broadcast(this, LightState.Id);
+}
+
+const FSpatialItemId& AVLightSpatialItemActor::GetSpatialItemId() const
+{
+	return LightState.Id;
 }
 
 void AVLightSpatialItemActor::OnRep_LightState()

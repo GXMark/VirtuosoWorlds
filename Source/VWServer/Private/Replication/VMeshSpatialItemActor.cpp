@@ -2,6 +2,7 @@
 
 #include "Components/StaticMeshComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "Utility/VSpatialActorEvents.h"
 
 AVMeshSpatialItemActor::AVMeshSpatialItemActor()
 {
@@ -57,9 +58,46 @@ const TArray<uint32>& AVMeshSpatialItemActor::GetMaterialIdsBySlot() const
 	return MaterialIdsBySlot;
 }
 
+void AVMeshSpatialItemActor::PostNetInit()
+{
+	Super::PostNetInit();
+
+	if (GetNetMode() != NM_Client)
+	{
+		return;
+	}
+
+	FSpatialActorEvents::OnSpatialActorPostInit().Broadcast(this, SpatialItemId);
+}
+
+const FMeshAssetId& AVMeshSpatialItemActor::GetSpatialMeshAssetId() const
+{
+	return MeshAssetId;
+}
+
+const TArray<uint32>& AVMeshSpatialItemActor::GetSpatialMaterialIdsBySlot() const
+{
+	return MaterialIdsBySlot;
+}
+
+UStaticMeshComponent* AVMeshSpatialItemActor::GetSpatialMeshComponent() const
+{
+	return MeshComp;
+}
+
 void AVMeshSpatialItemActor::OnRep_SpatialTransform()
 {
 	ApplyTransform();
+}
+
+void AVMeshSpatialItemActor::OnRep_MeshAssetId()
+{
+	FSpatialActorEvents::OnSpatialActorMeshAssetIdChanged().Broadcast(this, MeshAssetId);
+}
+
+void AVMeshSpatialItemActor::OnRep_MaterialIdsBySlot()
+{
+	FSpatialActorEvents::OnSpatialActorMaterialIdsChanged().Broadcast(this, MaterialIdsBySlot);
 }
 
 void AVMeshSpatialItemActor::ApplyTransform()
