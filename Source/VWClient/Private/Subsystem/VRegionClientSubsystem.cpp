@@ -316,10 +316,10 @@ void URegionClientSubsystem::TryApplyMaterials(const FGuid& ItemId, AActor* Acto
 }
 
 void URegionClientSubsystem::OnMaterialResolved(
-	const FGuid ItemId,
+	UMaterialInstanceDynamic* Material,
+	FGuid ItemId,
 	int32 Revision,
-	int32 SlotIndex,
-	UMaterialInterface* Material)
+	int32 SlotIndex)
 {
 	FSpatialActorVisualState* State = VisualStates.Find(ItemId);
 	if (!State || State->MaterialRevision != Revision)

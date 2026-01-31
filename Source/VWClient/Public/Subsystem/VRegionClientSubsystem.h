@@ -10,6 +10,7 @@ class URegionClientBridge;
 class UVAssetManager;
 class UVMaterialPresenter;
 class UMaterialInterface;
+class UMaterialInstanceDynamic;
 
 USTRUCT()
 struct FSpatialActorVisualState
@@ -50,7 +51,7 @@ private:
 	void RequestMaterialUpdates(const FGuid& ItemId, FSpatialActorVisualState& State);
 	void TryApplyMesh(const FGuid& ItemId, AActor* Actor, FSpatialActorVisualState& State);
 	void TryApplyMaterials(const FGuid& ItemId, AActor* Actor, FSpatialActorVisualState& State);
-	void OnMaterialResolved(const FGuid ItemId, int32 Revision, int32 SlotIndex, UMaterialInterface* Material);
+	void OnMaterialResolved(UMaterialInstanceDynamic* Material, FGuid ItemId, int32 Revision, int32 SlotIndex);
 	FGuid ResolveMaterialGuid(uint32 MaterialId) const;
 
 	TMap<FGuid, TWeakObjectPtr<AActor>> SpatialItemActors;
