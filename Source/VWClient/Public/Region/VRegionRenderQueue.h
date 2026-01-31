@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Model/Network/VMRepSpatialItemNet.h"
+#include "Templates/Function.h"
 #include "VRegionRenderQueue.generated.h"
 
 UENUM()
@@ -37,7 +38,11 @@ class VWCLIENT_API FVRegionRenderQueue
 {
 public:
 	void Enqueue(FVRegionRenderWorkItem&& Item);
-	void Drain(int32 BudgetPoints, int32& OutAppliedCount, int32& OutBudgetRemaining);
+	void Drain(
+		int32 BudgetPoints,
+		int32& OutAppliedCount,
+		int32& OutBudgetRemaining,
+		const TFunctionRef<bool(const FVRegionRenderWorkItem&)>& ApplyWork);
 	int32 Num() const;
 
 private:

@@ -5,12 +5,12 @@
 #include "Model/Package/VMMaterial.h"
 #include "Model/Network/VMRepSpatialItemNet.h"
 #include "Region/VRegionClientJobs.h"
+#include "Region/VRegionClientResolver.h"
 #include "Region/VRegionRenderQueue.h"
 #include "VRegionClient.generated.h"
 
 class URegionClientBridge;
 class UVAssetManager;
-class UVRegionClientResolver;
 class UVMaterialPresenterApplier;
 class UVMaterialResolver;
 
@@ -73,8 +73,15 @@ private:
 	void RegisterActor(AActor* Actor, const FGuid& ItemId);
 	FGuid ResolveSpatialId(AActor* Actor, const FSpatialItemId* SpatialIdOverride = nullptr);
 	void SyncVisualStateFromActor(AActor* Actor, const FGuid& ItemId);
-	void TryApplyMesh(const FGuid& ItemId, AActor* Actor, FSpatialActorVisualState& State) const;
-	void TryApplyMaterials(const FGuid& ItemId, AActor* Actor, FSpatialActorVisualState& State) const;
+	bool TryApplyMesh(const FGuid& ItemId, AActor* Actor, FSpatialActorVisualState& State) const;
+	bool TryApplyMaterials(const FGuid& ItemId, AActor* Actor, FSpatialActorVisualState& State) const;
+	bool ApplyRenderWork(const FVRegionRenderWorkItem& Item);
+	bool ApplyMeshWork(const FVRegionRenderWorkItem& Item, AActor* Actor) const;
+	bool ApplyMaterialsWork(const FVRegionRenderWorkItem& Item, AActor* Actor) const;
+	bool ApplyLegacyFallback(
+		const FVRegionRenderWorkItem& Item,
+		AActor* Actor,
+		const UVRegionClientResolver::FRegionClientItemSnapshot& Snapshot);
 
 	TMap<FGuid, TWeakObjectPtr<AActor>> SpatialItemActors;
 	TMap<TWeakObjectPtr<AActor>, FGuid> ActorToSpatialId;

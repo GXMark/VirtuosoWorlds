@@ -45,7 +45,11 @@ void FVRegionRenderQueue::Enqueue(FVRegionRenderWorkItem&& Item)
 	Queue.Add(MoveTemp(Item));
 }
 
-void FVRegionRenderQueue::Drain(int32 BudgetPoints, int32& OutAppliedCount, int32& OutBudgetRemaining)
+void FVRegionRenderQueue::Drain(
+	int32 BudgetPoints,
+	int32& OutAppliedCount,
+	int32& OutBudgetRemaining,
+	const TFunctionRef<bool(const FVRegionRenderWorkItem&)>& ApplyWork)
 {
 	OutAppliedCount = 0;
 	OutBudgetRemaining = FMath::Max(0, BudgetPoints);
@@ -64,7 +68,10 @@ void FVRegionRenderQueue::Drain(int32 BudgetPoints, int32& OutAppliedCount, int3
 		}
 
 		OutBudgetRemaining -= Item.Weight;
-		++OutAppliedCount;
+		if (ApplyWork(Item))
+		{
+			++OutAppliedCount;
+		}
 		++ItemsToRemove;
 	}
 
