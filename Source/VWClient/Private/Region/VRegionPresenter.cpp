@@ -1,25 +1,15 @@
 #include "Region/VRegionPresenter.h"
 
-#include "Presentation/VDecalPresenter.h"
-#include "Presentation/VLightPresenter.h"
 #include "Presentation/VMaterialPresenter.h"
 #include "Presentation/VMeshPresenter.h"
-#include "Presentation/VSpatialItemComponentRegistry.h"
 #include "Materials/MaterialInterface.h"
-#include "Components/SceneComponent.h"
 
 void UVRegionPresenter::Initialize(
 	UVMeshPresenter* InMeshPresenter,
-	UVMaterialPresenter* InMaterialPresenter,
-	UVLightPresenter* InLightPresenter,
-	UVDecalPresenter* InDecalPresenter,
-	UVSpatialItemComponentRegistry* InItemRegistry)
+	UVMaterialPresenter* InMaterialPresenter)
 {
 	MeshPresenter = InMeshPresenter;
 	MaterialPresenter = InMaterialPresenter;
-	LightPresenter = InLightPresenter;
-	DecalPresenter = InDecalPresenter;
-	ItemRegistry = InItemRegistry;
 }
 
 void UVRegionPresenter::Commit(const TArray<FResolvedItemBundle>& Bundles)
@@ -41,18 +31,6 @@ void UVRegionPresenter::ReleaseItem(const FGuid& ItemId)
 	{
 		MeshPresenter->DestroyItem(ItemId);
 	}
-	if (LightPresenter.IsValid())
-	{
-		LightPresenter->DestroyItem(ItemId);
-	}
-	if (DecalPresenter.IsValid())
-	{
-		DecalPresenter->DestroyItem(ItemId);
-	}
-	if (ItemRegistry.IsValid())
-	{
-		ItemRegistry->DestroyItemRoot(ItemId);
-	}
 	if (MaterialPresenter.IsValid())
 	{
 		MaterialPresenter->ForgetItem(ItemId);
@@ -61,14 +39,6 @@ void UVRegionPresenter::ReleaseItem(const FGuid& ItemId)
 
 void UVRegionPresenter::PresentBundle(const FResolvedItemBundle& Bundle)
 {
-	if (ItemRegistry.IsValid())
-	{
-		if (USceneComponent* ItemRoot = ItemRegistry->GetOrCreateItemRoot(Bundle.ItemId))
-		{
-			ItemRoot->SetWorldTransform(Bundle.WorldTransform);
-		}
-	}
-
 	switch (Bundle.ItemType)
 	{
 	case ESpatialItemType::Mesh:
@@ -100,27 +70,10 @@ void UVRegionPresenter::PresentBundle(const FResolvedItemBundle& Bundle)
 		break;
 	}
 	case ESpatialItemType::PointLight:
-		if (LightPresenter.IsValid())
-		{
-			LightPresenter->PresentPointLightItem(Bundle.ItemId, Bundle.PointLightPayload, Bundle.WorldTransform);
-		}
 		break;
 	case ESpatialItemType::SpotLight:
-		if (LightPresenter.IsValid())
-		{
-			LightPresenter->PresentSpotLightItem(Bundle.ItemId, Bundle.SpotLightPayload, Bundle.WorldTransform);
-		}
 		break;
 	case ESpatialItemType::Decal:
-		if (DecalPresenter.IsValid())
-		{
-			UMaterialInterface* DecalMaterial = nullptr;
-			if (Bundle.Materials.Num() > 0)
-			{
-				DecalMaterial = Bundle.Materials[0].Get();
-			}
-			DecalPresenter->PresentDecalItem(Bundle.ItemId, Bundle.DecalPayload, Bundle.WorldTransform, DecalMaterial);
-		}
 		break;
 	default:
 		break;

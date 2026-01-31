@@ -5,11 +5,8 @@
 #include "Region/VRegionResolver.h"
 #include "VRegionPresenter.generated.h"
 
-class UVDecalPresenter;
-class UVLightPresenter;
 class UVMaterialPresenter;
 class UVMeshPresenter;
-class UVSpatialItemComponentRegistry;
 
 UCLASS()
 class VWCLIENT_API UVRegionPresenter : public UObject
@@ -19,10 +16,7 @@ class VWCLIENT_API UVRegionPresenter : public UObject
 public:
 	void Initialize(
 		UVMeshPresenter* InMeshPresenter,
-		UVMaterialPresenter* InMaterialPresenter,
-		UVLightPresenter* InLightPresenter,
-		UVDecalPresenter* InDecalPresenter,
-		UVSpatialItemComponentRegistry* InItemRegistry);
+		UVMaterialPresenter* InMaterialPresenter);
 
 	void Commit(const TArray<FResolvedItemBundle>& Bundles);
 	void ReleaseItem(const FGuid& ItemId);
@@ -30,9 +24,6 @@ public:
 private:
 	TWeakObjectPtr<UVMeshPresenter> MeshPresenter;
 	TWeakObjectPtr<UVMaterialPresenter> MaterialPresenter;
-	TWeakObjectPtr<UVLightPresenter> LightPresenter;
-	TWeakObjectPtr<UVDecalPresenter> DecalPresenter;
-	TWeakObjectPtr<UVSpatialItemComponentRegistry> ItemRegistry;
 
 	void PresentBundle(const FResolvedItemBundle& Bundle);
 };
