@@ -9,9 +9,10 @@
 
 #if WITH_CLIENT_CODE
 #include "Region/VRegionClientBridgeEndpoint.h"
-class AVRegionClient;
 class URegionClientBridge; // forward declare
 #endif
+
+class AVRegionClient;
 
 #if WITH_SERVER_CODE
 #include "Region/VRegionServerBridgeEndpoint.h"
@@ -127,10 +128,8 @@ private:
 	UPROPERTY()
 	TObjectPtr<URegionServerBridge> RegionServerBridge;
 
-#if WITH_CLIENT_CODE
 	UPROPERTY()
 	TObjectPtr<AVRegionClient> RegionClient;
-#endif
 
 	float MaxSpatialDistance = 0.f;
 	int32 SpatialItemsReceived = 0;
