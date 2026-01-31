@@ -1,15 +1,14 @@
 #include "Subsystem/VRegionClientSubsystem.h"
 
 #include "Interface/VSpatialItemActorInterface.h"
-#include "Presentation/VMaterialPresenter.h"
+#include "Presentation/VMaterialPresenterApplier.h"
+#include "Presentation/VMaterialResolver.h"
 #include "Region/VRegionClientBridge.h"
 #include "Subsystem/VAssetManager.h"
 #include "Utility/VSpatialActorEvents.h"
-#include "Algo/Unique.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
-#include "Materials/MaterialInterface.h"
 
 void URegionClientSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -23,14 +22,17 @@ void URegionClientSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 	AssetManager = World->GetSubsystem<UVAssetManager>();
 
-	MaterialPresenter = NewObject<UVMaterialPresenter>(this);
-	MaterialPresenter->Initialize();
-
 	if (APlayerController* PC = World->GetFirstPlayerController())
 	{
 		RegionBridge = NewObject<URegionClientBridge>(this);
 		RegionBridge->Initialize(PC);
 	}
+
+	MaterialResolver = NewObject<UVMaterialResolver>(this);
+	MaterialResolver->Initialize(AssetManager, RegionBridge);
+
+	MaterialPresenter = NewObject<UVMaterialPresenterApplier>(this);
+	MaterialPresenter->Initialize(MaterialResolver);
 
 	PostInitHandle = FSpatialActorEvents::OnSpatialActorPostInit().AddUObject(
 		this, &URegionClientSubsystem::HandleSpatialActorPostInit);
@@ -60,9 +62,9 @@ void URegionClientSubsystem::Deinitialize()
 
 void URegionClientSubsystem::OnMaterialsBatchReceived(const TArray<FVMMaterial>& Materials)
 {
-	if (AssetManager)
+	if (MaterialResolver)
 	{
-		AssetManager->SubmitMaterialItems(Materials);
+		MaterialResolver->OnMaterialsBatchReceived(Materials);
 	}
 }
 
@@ -118,12 +120,8 @@ void URegionClientSubsystem::HandleMaterialIdsChanged(AActor* Actor, const TArra
 
 	FSpatialActorVisualState& State = VisualStates.FindOrAdd(ItemId);
 	State.MaterialIdsBySlot = MaterialIds;
-	State.MaterialRevision += 1;
-	State.PendingMaterialRequests = 0;
-	State.ResolvedMaterials.SetNum(MaterialIds.Num());
 	State.bMaterialsPending = true;
 
-	RequestMaterialUpdates(ItemId, State);
 	TryApplyMaterials(ItemId, Actor, State);
 }
 
@@ -143,7 +141,13 @@ void URegionClientSubsystem::HandleActorDestroyed(AActor* Actor)
 
 		if (MaterialPresenter)
 		{
-			MaterialPresenter->ForgetItem(*ItemId);
+			if (ISpatialMeshItemActorInterface* MeshInterface = Cast<ISpatialMeshItemActorInterface>(Actor))
+			{
+				if (UStaticMeshComponent* MeshComp = MeshInterface->GetSpatialMeshComponent())
+				{
+					MaterialPresenter->ForgetMeshComponent(MeshComp);
+				}
+			}
 		}
 	}
 }
@@ -209,60 +213,18 @@ void URegionClientSubsystem::SyncVisualStateFromActor(AActor* Actor, const FGuid
 		FSpatialActorVisualState& State = VisualStates.FindOrAdd(ItemId);
 		State.MeshAssetId = MeshInterface->GetSpatialMeshAssetId();
 		State.MaterialIdsBySlot = MeshInterface->GetSpatialMaterialIdsBySlot();
-		State.MaterialRevision += 1;
-		State.ResolvedMaterials.SetNum(State.MaterialIdsBySlot.Num());
 		State.bMeshPending = true;
 		State.bMaterialsPending = true;
 
-		RequestMaterialUpdates(ItemId, State);
 		TryApplyMesh(ItemId, Actor, State);
 		TryApplyMaterials(ItemId, Actor, State);
 	}
 }
 
-void URegionClientSubsystem::RequestMaterialUpdates(const FGuid& ItemId, FSpatialActorVisualState& State)
-{
-	if (!AssetManager)
-	{
-		return;
-	}
-
-	TArray<FGuid> RequestedMaterialIds;
-	RequestedMaterialIds.Reserve(State.MaterialIdsBySlot.Num());
-
-	const int32 Revision = State.MaterialRevision;
-	State.PendingMaterialRequests = 0;
-
-	for (int32 SlotIndex = 0; SlotIndex < State.MaterialIdsBySlot.Num(); ++SlotIndex)
-	{
-		const uint32 MaterialId = State.MaterialIdsBySlot[SlotIndex];
-		if (UMaterialInterface* CachedMaterial = ResolveMaterialById(
-				MaterialId,
-				ItemId,
-				Revision,
-				SlotIndex,
-				RequestedMaterialIds))
-		{
-			State.ResolvedMaterials[SlotIndex] = CachedMaterial;
-			continue;
-		}
-
-		if (MaterialId != 0)
-		{
-			State.PendingMaterialRequests += 1;
-		}
-	}
-
-	if (RegionBridge && RequestedMaterialIds.Num() > 0)
-	{
-		RequestedMaterialIds.Sort();
-		RequestedMaterialIds.SetNum(Algo::Unique(RequestedMaterialIds));
-		RegionBridge->RequestMaterialsBatch(RequestedMaterialIds);
-	}
-}
-
 void URegionClientSubsystem::TryApplyMesh(const FGuid& ItemId, AActor* Actor, FSpatialActorVisualState& State)
 {
+	UE_UNUSED(ItemId);
+
 	if (!Actor || !AssetManager)
 	{
 		return;
@@ -284,6 +246,7 @@ void URegionClientSubsystem::TryApplyMesh(const FGuid& ItemId, AActor* Actor, FS
 				{
 					MeshComp->SetStaticMesh(MeshAsset);
 					State.bMeshPending = false;
+					TryApplyMaterials(ItemId, Actor, State);
 				}
 			}
 		}
@@ -292,7 +255,9 @@ void URegionClientSubsystem::TryApplyMesh(const FGuid& ItemId, AActor* Actor, FS
 
 void URegionClientSubsystem::TryApplyMaterials(const FGuid& ItemId, AActor* Actor, FSpatialActorVisualState& State)
 {
-	if (!Actor || State.PendingMaterialRequests > 0 || !MaterialPresenter)
+	UE_UNUSED(ItemId);
+
+	if (!Actor || !MaterialPresenter)
 	{
 		return;
 	}
@@ -301,107 +266,8 @@ void URegionClientSubsystem::TryApplyMaterials(const FGuid& ItemId, AActor* Acto
 	{
 		if (UStaticMeshComponent* MeshComp = MeshInterface->GetSpatialMeshComponent())
 		{
-			TArray<UMaterialInterface*> Materials;
-			Materials.Reserve(State.ResolvedMaterials.Num());
-			for (const TObjectPtr<UMaterialInterface>& Material : State.ResolvedMaterials)
-			{
-				Materials.Add(Material.Get());
-			}
-			MaterialPresenter->ApplyMaterials(ItemId, MeshComp, Materials);
+			MaterialPresenter->ApplyMaterials(MeshComp, State.MaterialIdsBySlot);
 			State.bMaterialsPending = false;
 		}
 	}
-}
-
-void URegionClientSubsystem::OnMaterialResolved(
-	UMaterialInstanceDynamic* Material,
-	uint32 MaterialId,
-	FGuid ItemId,
-	int32 Revision,
-	int32 SlotIndex)
-{
-	if (MaterialId != 0)
-	{
-		PendingMaterialDeliveries.Remove(MaterialId);
-		if (Material)
-		{
-			MaterialCacheById.Add(MaterialId, Material);
-		}
-	}
-
-	FSpatialActorVisualState* State = VisualStates.Find(ItemId);
-	if (!State || State->MaterialRevision != Revision)
-	{
-		return;
-	}
-
-	if (!State->ResolvedMaterials.IsValidIndex(SlotIndex))
-	{
-		return;
-	}
-
-	State->ResolvedMaterials[SlotIndex] = Material;
-	State->PendingMaterialRequests = FMath::Max(0, State->PendingMaterialRequests - 1);
-
-	if (TWeakObjectPtr<AActor>* Actor = SpatialItemActors.Find(ItemId))
-	{
-		TryApplyMaterials(ItemId, Actor->Get(), *State);
-	}
-}
-
-FGuid URegionClientSubsystem::ResolveMaterialGuid(uint32 MaterialId) const
-{
-	if (MaterialId == 0)
-	{
-		return FGuid();
-	}
-
-	return FGuid(static_cast<int32>(MaterialId), 0, 0, 0);
-}
-
-UMaterialInterface* URegionClientSubsystem::ResolveMaterialById(
-	uint32 MaterialId,
-	const FGuid& ItemId,
-	int32 Revision,
-	int32 SlotIndex,
-	TArray<FGuid>& OutMaterialRequests)
-{
-	if (MaterialId == 0)
-	{
-		return nullptr;
-	}
-
-	if (TObjectPtr<UMaterialInterface>* Cached = MaterialCacheById.Find(MaterialId))
-	{
-		return Cached->Get();
-	}
-
-	if (!AssetManager)
-	{
-		return nullptr;
-	}
-
-	const FGuid MaterialGuid = ResolveMaterialGuid(MaterialId);
-	if (!MaterialGuid.IsValid())
-	{
-		return nullptr;
-	}
-
-	if (!PendingMaterialDeliveries.Contains(MaterialId))
-	{
-		PendingMaterialDeliveries.Add(MaterialId);
-		OutMaterialRequests.Add(MaterialGuid);
-	}
-
-	AssetManager->RequestMaterialInstanceAsync(
-		MaterialGuid,
-		FVOnMaterialInstanceLoaded::CreateUObject(
-			this,
-			&URegionClientSubsystem::OnMaterialResolved,
-			MaterialId,
-			ItemId,
-			Revision,
-			SlotIndex));
-
-	return nullptr;
 }
