@@ -70,7 +70,7 @@ namespace
 
 AVRegionClient::AVRegionClient()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 }
 
 void AVRegionClient::BeginPlay()
@@ -123,6 +123,40 @@ void AVRegionClient::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	}
 
 	Super::EndPlay(EndPlayReason);
+}
+
+void AVRegionClient::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	const int32 JobsPerTick = CVarRegionClientJobsPerTick.GetValueOnGameThread();
+	const int32 JobsToDrain = FMath::Max(0, JobsPerTick);
+	const int32 QueueSizeBefore = JobQueue.Num();
+	const int32 JobsDrainedThisTick = FMath::Min(QueueSizeBefore, JobsToDrain);
+
+	if (JobsDrainedThisTick > 0)
+	{
+		JobQueue.RemoveAt(0, JobsDrainedThisTick, false);
+		CoalescedJobIndices.Reset();
+		for (int32 Index = 0; Index < JobQueue.Num(); ++Index)
+		{
+			if (ShouldCoalesceJob(JobQueue[Index].JobType))
+			{
+				CoalescedJobIndices.Add({JobQueue[Index].ItemId, JobQueue[Index].JobType}, Index);
+			}
+		}
+	}
+
+	if (IsRegionClientDebugEnabled())
+	{
+		UE_LOG(
+			LogVRegionClient,
+			Log,
+			TEXT("AVRegionClient Tick drain queue_before=%d queue_after=%d drained=%d"),
+			QueueSizeBefore,
+			JobQueue.Num(),
+			JobsDrainedThisTick);
+	}
 }
 
 void AVRegionClient::OnMaterialsBatchReceived(const TArray<FVMMaterial>& Materials)
