@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Interface/VSpatialItemActorInterface.h"
 #include "Model/Network/VMRepSpatialItemNet.h"
 #include "VLightSpatialItemActor.generated.h"
 
@@ -12,7 +13,7 @@ class USceneComponent;
 class USpotLightComponent;
 
 UCLASS()
-class VWSERVER_API AVLightSpatialItemActor : public AActor
+class VWSERVER_API AVLightSpatialItemActor : public AActor, public ISpatialItemActorInterface
 {
 	GENERATED_BODY()
 
@@ -27,7 +28,10 @@ public:
 	UPointLightComponent* GetPointLightComponent() const;
 	USpotLightComponent* GetSpotLightComponent() const;
 
+	virtual void PostNetInit() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	virtual const FSpatialItemId& GetSpatialItemId() const override;
 
 private:
 	static FTransform ToTransform(const FVMTransformNet& InTransform);

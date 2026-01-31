@@ -18,6 +18,9 @@
 #if WITH_CLIENT_CODE
 #include "Subsystem/VAssetManager.h"
 #include "Region/VRegionClient.h"
+#if WITH_CLIENT_CODE
+#include "Subsystem/VRegionClientSubsystem.h"
+#endif
 #include "Region/VRegionClientBridge.h"
 #endif
 
@@ -427,6 +430,11 @@ void AVPlayerController::ClientReceiveMaterialsBatch_Implementation(const TArray
 	if (RegionClient)
 	{
 		RegionClient->OnMaterialsBatchReceived(Materials);
+	}
+
+	if (URegionClientSubsystem* RegionSubsystem = World->GetSubsystem<URegionClientSubsystem>())
+	{
+		RegionSubsystem->OnMaterialsBatchReceived(Materials);
 	}
 #endif
 }
