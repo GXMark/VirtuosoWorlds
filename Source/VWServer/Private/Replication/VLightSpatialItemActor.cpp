@@ -33,7 +33,7 @@ AVLightSpatialItemActor::AVLightSpatialItemActor()
 void AVLightSpatialItemActor::InitializeFromItem(const FVMRepLightSpatialItem& InItem)
 {
 	LightState = InItem;
-	ApplyLightState();
+	ApplyReplicatedLightState();
 }
 
 void AVLightSpatialItemActor::UpdateFromItem(const FVMRepLightSpatialItem& InItem)
@@ -70,6 +70,7 @@ void AVLightSpatialItemActor::PostNetInit()
 		return;
 	}
 
+	ApplyReplicatedLightState();
 	FSpatialActorEvents::OnSpatialActorPostInit().Broadcast(this, LightState.Id);
 }
 
@@ -80,10 +81,10 @@ const FSpatialItemId& AVLightSpatialItemActor::GetSpatialItemId() const
 
 void AVLightSpatialItemActor::OnRep_LightState()
 {
-	ApplyLightState();
+	ApplyReplicatedLightState();
 }
 
-void AVLightSpatialItemActor::ApplyLightState()
+void AVLightSpatialItemActor::ApplyReplicatedLightState()
 {
 	SetActorTransform(ToTransform(LightState.Transform));
 	UpdateActiveLightComponent();

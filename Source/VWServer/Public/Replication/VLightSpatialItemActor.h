@@ -35,7 +35,7 @@ public:
 
 private:
 	static FTransform ToTransform(const FVMTransformNet& InTransform);
-	void ApplyLightState();
+	void ApplyReplicatedLightState();
 	void ApplyCommonLightSettings(ULightComponent* LightComp) const;
 	void ApplyLightingChannels(ULightComponent* LightComp) const;
 	void UpdateActiveLightComponent() const;

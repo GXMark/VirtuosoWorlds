@@ -16,6 +16,10 @@ class VWCLIENT_API UVMaterialPresenterApplier : public UObject
 public:
 	void Initialize(UVMaterialResolver* InResolver);
 	void ApplyMaterials(UStaticMeshComponent* MeshComp, const TArray<uint32>& MaterialIdsBySlot);
+	void ApplyMaterialsForSlots(
+		UStaticMeshComponent* MeshComp,
+		const TArray<uint32>& MaterialIdsBySlot,
+		const TArray<int32>& SlotsToApply);
 	void ForgetMeshComponent(UStaticMeshComponent* MeshComp);
 
 private:
@@ -31,6 +35,11 @@ private:
 		TWeakObjectPtr<UStaticMeshComponent> MeshComp,
 		int32 Revision,
 		int32 SlotIndex);
+
+	void ApplyMaterialsInternal(
+		UStaticMeshComponent* MeshComp,
+		const TArray<uint32>& MaterialIdsBySlot,
+		const TArray<int32>* SlotsToApply);
 
 	TMap<TWeakObjectPtr<UStaticMeshComponent>, FMaterialApplyState> StateByComponent;
 	TWeakObjectPtr<UVMaterialResolver> Resolver;

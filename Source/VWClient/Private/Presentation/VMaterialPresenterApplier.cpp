@@ -11,6 +11,22 @@ void UVMaterialPresenterApplier::Initialize(UVMaterialResolver* InResolver)
 
 void UVMaterialPresenterApplier::ApplyMaterials(UStaticMeshComponent* MeshComp, const TArray<uint32>& MaterialIdsBySlot)
 {
+	ApplyMaterialsInternal(MeshComp, MaterialIdsBySlot, nullptr);
+}
+
+void UVMaterialPresenterApplier::ApplyMaterialsForSlots(
+	UStaticMeshComponent* MeshComp,
+	const TArray<uint32>& MaterialIdsBySlot,
+	const TArray<int32>& SlotsToApply)
+{
+	ApplyMaterialsInternal(MeshComp, MaterialIdsBySlot, &SlotsToApply);
+}
+
+void UVMaterialPresenterApplier::ApplyMaterialsInternal(
+	UStaticMeshComponent* MeshComp,
+	const TArray<uint32>& MaterialIdsBySlot,
+	const TArray<int32>* SlotsToApply)
+{
 	if (!MeshComp || !Resolver.IsValid())
 	{
 		return;
@@ -29,12 +45,20 @@ void UVMaterialPresenterApplier::ApplyMaterials(UStaticMeshComponent* MeshComp, 
 	const int32 Revision = State.Revision;
 	const TWeakObjectPtr<UStaticMeshComponent> WeakComp(MeshComp);
 
-	for (int32 SlotIndex = 0; SlotIndex < MaterialIdsBySlot.Num(); ++SlotIndex)
+	const int32 SlotUpperBound = MaterialIdsBySlot.Num();
+	const TArray<int32>* Slots = SlotsToApply;
+
+	auto ApplySlot = [&](int32 SlotIndex)
 	{
+		if (SlotIndex < 0 || SlotIndex >= SlotUpperBound)
+		{
+			return;
+		}
+
 		const uint32 MaterialId = MaterialIdsBySlot[SlotIndex];
 		if (MaterialId == 0)
 		{
-			continue;
+			return;
 		}
 
 		const int32 ClampedSlot = FMath::Clamp(SlotIndex, 0, SlotCount - 1);
@@ -47,6 +71,21 @@ void UVMaterialPresenterApplier::ApplyMaterials(UStaticMeshComponent* MeshComp, 
 				WeakComp,
 				Revision,
 				ClampedSlot));
+	}
+
+	if (Slots && Slots->Num() > 0)
+	{
+		for (const int32 SlotIndex : *Slots)
+		{
+			ApplySlot(SlotIndex);
+		}
+	}
+	else
+	{
+		for (int32 SlotIndex = 0; SlotIndex < MaterialIdsBySlot.Num(); ++SlotIndex)
+		{
+			ApplySlot(SlotIndex);
+		}
 	}
 }
 
