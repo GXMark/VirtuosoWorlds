@@ -6,6 +6,9 @@
 #include "Replication/VReplicationManager.h"
 #include "VSpatialItemActor.generated.h"
 
+class UPrimitiveComponent;
+class USceneComponent;
+
 UCLASS()
 class VWSERVER_API AVSpatialItemActor : public AActor
 {
@@ -26,6 +29,21 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 private:
+	void ApplyCollisionFromItem();
+	void ClearCollisionComponents();
+
+	UPROPERTY()
+	TObjectPtr<USceneComponent> CollisionRoot;
+
+	UPROPERTY()
+	TArray<TObjectPtr<UPrimitiveComponent>> CollisionComponents;
+
+	UPROPERTY()
+	FGuid AppliedCollisionId;
+
+	UPROPERTY()
+	bool bAppliedToBodySetup = false;
+
 	UPROPERTY(Replicated)
 	FVMSpatialItemNet SpatialItem;
 };

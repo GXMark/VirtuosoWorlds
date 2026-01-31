@@ -16,7 +16,8 @@ public class VWServer : ModuleRules
                 "Engine",
                 "NetCore",
 		        "VWShared",
-                "VWDatabase"
+                "VWDatabase",
+                "ProceduralMeshComponent"
             }
         );
 
