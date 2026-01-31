@@ -294,14 +294,11 @@ void AVRegionClient::TryApplyMesh(const FGuid& ItemId, AActor* Actor, FSpatialAc
 
 		if (UStaticMeshComponent* MeshComp = MeshInterface->GetSpatialMeshComponent())
 		{
-			if (AssetManager->MeshAgent)
+			if (UStaticMesh* MeshAsset = AssetManager->GetCachedStaticMesh(MeshId))
 			{
-				if (UStaticMesh* MeshAsset = AssetManager->MeshAgent->GetMesh(MeshId))
-				{
-					MeshComp->SetStaticMesh(MeshAsset);
-					State.bMeshPending = false;
-					TryApplyMaterials(ItemId, Actor, State);
-				}
+				MeshComp->SetStaticMesh(MeshAsset);
+				State.bMeshPending = false;
+				TryApplyMaterials(ItemId, Actor, State);
 			}
 		}
 	}

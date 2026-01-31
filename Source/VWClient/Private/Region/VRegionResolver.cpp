@@ -2,8 +2,6 @@
 
 #include "Region/VRegionClientBridge.h"
 #include "Subsystem/VAssetManager.h"
-#include "Asset/Agent/VMaterialAgent.h"
-#include "Asset/Agent/VMeshAgent.h"
 #include "Model/Constant/VConstants.h"
 
 void UVRegionResolver::Initialize(
@@ -141,10 +139,10 @@ void UVRegionResolver::GetResolvedBundles(int32 MaxResolvedBundlesPerTick, TArra
 
 		if (Item->PayloadType == ESpatialItemType::Mesh)
 		{
-			if (AssetManager.IsValid() && AssetManager->MeshAgent)
+			if (AssetManager.IsValid())
 			{
 				const FGuid MeshId = Item->MeshPayload.mesh_ref.id.Value;
-				Bundle.MeshAsset = AssetManager->MeshAgent->GetMesh(MeshId);
+				Bundle.MeshAsset = AssetManager->GetCachedStaticMesh(MeshId);
 			}
 		}
 
@@ -154,9 +152,9 @@ void UVRegionResolver::GetResolvedBundles(int32 MaxResolvedBundlesPerTick, TArra
 			for (const FGuid& MatId : Instance->MaterialIds)
 			{
 				UMaterialInterface* Material = nullptr;
-				if (MatId.IsValid() && AssetManager.IsValid() && AssetManager->MaterialAgent)
+				if (MatId.IsValid() && AssetManager.IsValid())
 				{
-					Material = AssetManager->MaterialAgent->GetMaterial(MatId);
+					Material = AssetManager->GetCachedMaterialInstance(MatId);
 				}
 				Bundle.Materials.Add(Material);
 			}
@@ -225,7 +223,7 @@ void UVRegionResolver::UpdateOrCreateInstance(const FVMSpatialItemNet& Item)
 void UVRegionResolver::UpdateTextureDependencies(FResolvedSpatialInstance& Instance)
 {
 	Instance.TextureIds.Reset();
-	if (!AssetManager.IsValid() || !AssetManager->MaterialAgent)
+	if (!AssetManager.IsValid())
 	{
 		return;
 	}
@@ -238,7 +236,7 @@ void UVRegionResolver::UpdateTextureDependencies(FResolvedSpatialInstance& Insta
 		}
 
 		FVMMaterial MaterialItem;
-		if (!AssetManager->MaterialAgent->GetMaterialItem(MatId, MaterialItem))
+		if (!AssetManager->GetMaterialItem(MatId, MaterialItem))
 		{
 			const FVMMaterial* Pending = PendingMaterials.Find(MatId);
 			if (Pending)
