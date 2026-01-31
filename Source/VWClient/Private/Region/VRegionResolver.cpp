@@ -364,11 +364,11 @@ bool UVRegionResolver::CanRender(const FResolvedSpatialInstance& Instance) const
 {
 	if (Instance.PayloadType == ESpatialItemType::Mesh)
 	{
-		return IsMeshReady(Instance) && AreMaterialsReady(Instance) && AreTexturesReady(Instance);
+		return IsMeshReady(Instance) && AreMaterialsReady(Instance);
 	}
 	if (Instance.PayloadType == ESpatialItemType::Decal)
 	{
-		return AreMaterialsReady(Instance) && AreTexturesReady(Instance);
+		return AreMaterialsReady(Instance);
 	}
 	return true;
 }
