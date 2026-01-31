@@ -236,23 +236,21 @@ void URegionClientSubsystem::RequestMaterialUpdates(const FGuid& ItemId, FSpatia
 	for (int32 SlotIndex = 0; SlotIndex < State.MaterialIdsBySlot.Num(); ++SlotIndex)
 	{
 		const uint32 MaterialId = State.MaterialIdsBySlot[SlotIndex];
-		const FGuid MaterialGuid = ResolveMaterialGuid(MaterialId);
-		if (!MaterialGuid.IsValid())
+		if (UMaterialInterface* CachedMaterial = ResolveMaterialById(
+				MaterialId,
+				ItemId,
+				Revision,
+				SlotIndex,
+				RequestedMaterialIds))
 		{
+			State.ResolvedMaterials[SlotIndex] = CachedMaterial;
 			continue;
 		}
 
-		RequestedMaterialIds.Add(MaterialGuid);
-		State.PendingMaterialRequests += 1;
-
-		AssetManager->RequestMaterialInstanceAsync(
-			MaterialGuid,
-			FVOnMaterialInstanceLoaded::CreateUObject(
-				this,
-				&URegionClientSubsystem::OnMaterialResolved,
-				ItemId,
-				Revision,
-				SlotIndex));
+		if (MaterialId != 0)
+		{
+			State.PendingMaterialRequests += 1;
+		}
 	}
 
 	if (RegionBridge && RequestedMaterialIds.Num() > 0)
@@ -317,10 +315,20 @@ void URegionClientSubsystem::TryApplyMaterials(const FGuid& ItemId, AActor* Acto
 
 void URegionClientSubsystem::OnMaterialResolved(
 	UMaterialInstanceDynamic* Material,
+	uint32 MaterialId,
 	FGuid ItemId,
 	int32 Revision,
 	int32 SlotIndex)
 {
+	if (MaterialId != 0)
+	{
+		PendingMaterialDeliveries.Remove(MaterialId);
+		if (Material)
+		{
+			MaterialCacheById.Add(MaterialId, Material);
+		}
+	}
+
 	FSpatialActorVisualState* State = VisualStates.Find(ItemId);
 	if (!State || State->MaterialRevision != Revision)
 	{
@@ -349,4 +357,51 @@ FGuid URegionClientSubsystem::ResolveMaterialGuid(uint32 MaterialId) const
 	}
 
 	return FGuid(static_cast<int32>(MaterialId), 0, 0, 0);
+}
+
+UMaterialInterface* URegionClientSubsystem::ResolveMaterialById(
+	uint32 MaterialId,
+	const FGuid& ItemId,
+	int32 Revision,
+	int32 SlotIndex,
+	TArray<FGuid>& OutMaterialRequests)
+{
+	if (MaterialId == 0)
+	{
+		return nullptr;
+	}
+
+	if (TObjectPtr<UMaterialInterface>* Cached = MaterialCacheById.Find(MaterialId))
+	{
+		return Cached->Get();
+	}
+
+	if (!AssetManager)
+	{
+		return nullptr;
+	}
+
+	const FGuid MaterialGuid = ResolveMaterialGuid(MaterialId);
+	if (!MaterialGuid.IsValid())
+	{
+		return nullptr;
+	}
+
+	if (!PendingMaterialDeliveries.Contains(MaterialId))
+	{
+		PendingMaterialDeliveries.Add(MaterialId);
+		OutMaterialRequests.Add(MaterialGuid);
+	}
+
+	AssetManager->RequestMaterialInstanceAsync(
+		MaterialGuid,
+		FVOnMaterialInstanceLoaded::CreateUObject(
+			this,
+			&URegionClientSubsystem::OnMaterialResolved,
+			MaterialId,
+			ItemId,
+			Revision,
+			SlotIndex));
+
+	return nullptr;
 }
