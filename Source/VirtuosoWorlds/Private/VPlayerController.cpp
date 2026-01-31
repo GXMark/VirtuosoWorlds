@@ -6,7 +6,6 @@
 #include "Blueprint/UserWidget.h"
 #include "RHI.h"
 #include "RendererInterface.h"
-#include "EngineUtils.h"
 #include "VPlayerState.h"
 #include "JsonObjectConverter.h"
 
@@ -19,13 +18,12 @@
 #include "Subsystem/VAssetManager.h"
 #if WITH_CLIENT_CODE
 #include "Subsystem/VRegionClientSubsystem.h"
-#endif
 #include "Region/VRegionClientBridge.h"
 #endif
 
 AVPlayerController::AVPlayerController()
 {
-	// Streaming is tick-driven by AVRegionClient. PlayerController remains an RPC endpoint.
+	// Client streaming is handled by the region client subsystem.
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
 	PrimaryActorTick.TickInterval = 0.f;
@@ -134,6 +132,7 @@ void AVPlayerController::BeginPlay()
 				UE_LOG(LogTemp, Error, TEXT("Player Controller - Begin Play [ Cache Manager Failed To Initialize ]"));
 			}
 		}
+
 #endif
 	}
 }
