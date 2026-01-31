@@ -3,19 +3,16 @@
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
-#include "Presentation/VSpatialItemComponentRegistry.h"
 #include "Subsystem/VAssetManager.h"
 
 void UVMeshPresenter::Initialize(
 	AActor* InOwner,
 	USceneComponent* InPresentationRoot,
-	UVAssetManager* InAssetManager,
-	UVSpatialItemComponentRegistry* InItemRegistry)
+	UVAssetManager* InAssetManager)
 {
 	PresentationOwner = InOwner;
 	PresentationRoot = InPresentationRoot;
 	AssetManager = InAssetManager;
-	ItemRegistry = InItemRegistry;
 }
 
 void UVMeshPresenter::SetOnMeshComponentReady(FOnMeshComponentReady InDelegate)
@@ -39,11 +36,10 @@ UStaticMeshComponent* UVMeshPresenter::PresentMeshItemWithAsset(
 	const FGuid& InParentId,
 	UStaticMesh* InMeshAsset)
 {
-	if (!PresentationOwner.IsValid() || !PresentationRoot.IsValid() || !AssetManager || !ItemRegistry)
+	if (!PresentationOwner.IsValid() || !PresentationRoot.IsValid() || !AssetManager)
 	{
 		return nullptr;
 	}
-	(void)InWorldTransform;
 
 	const FGuid& MeshId = InMeshData.mesh_ref.id.Value;
 	UE_LOG(LogTemp, Log,
@@ -53,16 +49,12 @@ UStaticMeshComponent* UVMeshPresenter::PresentMeshItemWithAsset(
 		MeshId.IsValid() ? *MeshId.ToString() : TEXT("<None>") );
 
 	UStaticMeshComponent* ExistingComp = SpawnedComponents.FindRef(InItemId);
-	USceneComponent* ItemRoot = ItemRegistry->GetOrCreateItemRoot(InItemId);
 	if (!ExistingComp)
 	{
 		ExistingComp = NewObject<UStaticMeshComponent>(PresentationOwner.Get());
-		if (ItemRoot)
-		{
-			ExistingComp->AttachToComponent(ItemRoot, FAttachmentTransformRules::KeepRelativeTransform);
-		}
+		ExistingComp->AttachToComponent(PresentationRoot.Get(), FAttachmentTransformRules::KeepRelativeTransform);
 		ExistingComp->RegisterComponent();
-		ExistingComp->SetRelativeTransform(FTransform::Identity);
+		ExistingComp->SetWorldTransform(InWorldTransform);
 		SpawnedComponents.Add(InItemId, ExistingComp);
 		if (OnMeshComponentReady.IsBound())
 		{
@@ -70,10 +62,14 @@ UStaticMeshComponent* UVMeshPresenter::PresentMeshItemWithAsset(
 		}
 	}
 
-	if (ItemRoot && ExistingComp && ExistingComp->GetAttachParent() != ItemRoot)
+	if (ExistingComp && ExistingComp->GetAttachParent() != PresentationRoot.Get())
 	{
-		ExistingComp->AttachToComponent(ItemRoot, FAttachmentTransformRules::KeepRelativeTransform);
-		ExistingComp->SetRelativeTransform(FTransform::Identity);
+		ExistingComp->AttachToComponent(PresentationRoot.Get(), FAttachmentTransformRules::KeepRelativeTransform);
+		ExistingComp->SetWorldTransform(InWorldTransform);
+	}
+	else if (ExistingComp)
+	{
+		ExistingComp->SetWorldTransform(InWorldTransform);
 	}
 
 	if (InMeshAsset)

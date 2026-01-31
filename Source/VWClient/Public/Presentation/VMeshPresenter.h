@@ -8,7 +8,6 @@
 class UStaticMeshComponent;
 class UStaticMesh;
 class UVAssetManager;
-class UVSpatialItemComponentRegistry;
 
 UCLASS()
 class VWCLIENT_API UVMeshPresenter : public UObject
@@ -21,8 +20,7 @@ public:
 	void Initialize(
 		AActor* InOwner,
 		USceneComponent* InPresentationRoot,
-		UVAssetManager* InAssetManager,
-		UVSpatialItemComponentRegistry* InItemRegistry);
+		UVAssetManager* InAssetManager);
 	void SetOnMeshComponentReady(FOnMeshComponentReady InDelegate);
 	UStaticMeshComponent* PresentMeshItem(
 		const FGuid& InItemId,
@@ -44,9 +42,6 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UVAssetManager> AssetManager;
-
-	UPROPERTY()
-	TObjectPtr<UVSpatialItemComponentRegistry> ItemRegistry;
 
 	TMap<FGuid, TObjectPtr<UStaticMeshComponent>> SpawnedComponents;
 	TMap<FGuid, FGuid> RequestedMeshByItemId;

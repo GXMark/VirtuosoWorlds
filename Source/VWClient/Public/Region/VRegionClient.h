@@ -12,14 +12,11 @@
 #include "VRegionClient.generated.h"
 
 class USceneComponent;
-class UVDecalPresenter;
-class UVLightPresenter;
 class UVMaterialPresenter;
 class UVMeshPresenter;
 class UVAssetManager;
 class UVRegionResolver;
 class UVRegionPresenter;
-class UVSpatialItemComponentRegistry;
 class APawn;
 
 UCLASS()
@@ -52,15 +49,6 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UVMaterialPresenter> MaterialPresenter;
-
-	UPROPERTY()
-	TObjectPtr<UVLightPresenter> LightPresenter;
-
-	UPROPERTY()
-	TObjectPtr<UVDecalPresenter> DecalPresenter;
-
-	UPROPERTY()
-	TObjectPtr<UVSpatialItemComponentRegistry> ItemRegistry;
 
 	UPROPERTY()
 	TObjectPtr<UVRegionResolver> RegionResolver;

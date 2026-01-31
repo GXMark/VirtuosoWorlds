@@ -1,9 +1,6 @@
 #include "Region/VRegionClient.h"
-#include "Presentation/VDecalPresenter.h"
-#include "Presentation/VLightPresenter.h"
 #include "Presentation/VMaterialPresenter.h"
 #include "Presentation/VMeshPresenter.h"
-#include "Presentation/VSpatialItemComponentRegistry.h"
 #include "Subsystem/VAssetManager.h"
 #include "Region/VRegionPresenter.h"
 #include "Region/VRegionResolver.h"
@@ -40,20 +37,11 @@ void AVRegionClient::BeginPlay()
 
 	AssetManager = GetWorld()->GetSubsystem<UVAssetManager>();
 
-	ItemRegistry = NewObject<UVSpatialItemComponentRegistry>(this);
-	ItemRegistry->Initialize(this, PresentationRoot);
-
 	MeshPresenter = NewObject<UVMeshPresenter>(this);
-	MeshPresenter->Initialize(this, PresentationRoot, AssetManager, ItemRegistry);
+	MeshPresenter->Initialize(this, PresentationRoot, AssetManager);
 
 	MaterialPresenter = NewObject<UVMaterialPresenter>(this);
 	MaterialPresenter->Initialize();
-
-	LightPresenter = NewObject<UVLightPresenter>(this);
-	LightPresenter->Initialize(this, PresentationRoot);
-
-	DecalPresenter = NewObject<UVDecalPresenter>(this);
-	DecalPresenter->Initialize(this, PresentationRoot);
 
 	// Initialize region bridge for all request types (spatial/material).
 	if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
@@ -69,10 +57,7 @@ void AVRegionClient::BeginPlay()
 	RegionPresenter = NewObject<UVRegionPresenter>(this);
 	RegionPresenter->Initialize(
 		MeshPresenter,
-		MaterialPresenter,
-		LightPresenter,
-		DecalPresenter,
-		ItemRegistry);
+		MaterialPresenter);
 
 	// Start streaming on the local client.
 	bSpatialStreamActive = true;
