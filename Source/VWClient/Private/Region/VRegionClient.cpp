@@ -10,6 +10,7 @@
 #include "Presentation/VMaterialResolver.h"
 #include "Region/VRegionClientBridge.h"
 #include "Region/VRegionClientResolver.h"
+#include "Region/VRegionRenderQueue.h"
 #include "Subsystem/VAssetManager.h"
 #include "Utility/VSpatialActorEvents.h"
 
@@ -40,7 +41,7 @@ namespace
 		return CVarRegionClientDebug.GetValueOnGameThread() != 0;
 	}
 
-	void LogRegionClientDebugState(const TCHAR* Context)
+	void LogRegionClientDebugState(const TCHAR* Context, int32 RenderQueueSize, int32 RenderAppliedCount)
 	{
 		if (!IsRegionClientDebugEnabled())
 		{
@@ -58,14 +59,16 @@ namespace
 		UE_LOG(
 			LogVRegionClient,
 			Log,
-			TEXT("AVRegionClient[%s] CVar jobs_per_tick=%d render_budget=%d | Queues(mesh=%d material=%d) | Drain(mesh=%d material=%d)"),
+			TEXT("AVRegionClient[%s] CVar jobs_per_tick=%d render_budget=%d | Queues(mesh=%d material=%d render=%d) | Drain(mesh=%d material=%d render=%d)"),
 			Context,
 			JobsPerTick,
 			RenderBudget,
 			PendingMeshQueueSize,
 			PendingMaterialQueueSize,
+			RenderQueueSize,
 			DrainedMeshJobsThisTick,
-			DrainedMaterialJobsThisTick);
+			DrainedMaterialJobsThisTick,
+			RenderAppliedCount);
 	}
 } // namespace
 
@@ -108,7 +111,7 @@ void AVRegionClient::BeginPlay()
 	MaterialIdsHandle = FSpatialActorEvents::OnSpatialActorMaterialIdsChanged().AddUObject(
 		this, &AVRegionClient::HandleMaterialIdsChanged);
 
-	LogRegionClientDebugState(TEXT("BeginPlay"));
+	LogRegionClientDebugState(TEXT("BeginPlay"), RenderQueue.Num(), 0);
 }
 
 void AVRegionClient::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -166,15 +169,22 @@ void AVRegionClient::Tick(float DeltaSeconds)
 		}
 	}
 
+	const int32 RenderBudget = FMath::Max(0, CVarRegionClientRenderBudget.GetValueOnGameThread());
+	int32 RenderAppliedCount = 0;
+	int32 RenderBudgetRemaining = RenderBudget;
+	RenderQueue.Drain(RenderBudget, RenderAppliedCount, RenderBudgetRemaining);
+
 	if (IsRegionClientDebugEnabled())
 	{
 		UE_LOG(
 			LogVRegionClient,
 			Log,
-			TEXT("AVRegionClient Tick drain queue_before=%d queue_after=%d drained=%d"),
+			TEXT("AVRegionClient Tick drain queue_before=%d queue_after=%d drained=%d render_queue=%d render_applied=%d"),
 			QueueSizeBefore,
 			JobQueue.Num(),
-			JobsDrainedThisTick);
+			JobsDrainedThisTick,
+			RenderQueue.Num(),
+			RenderAppliedCount);
 	}
 }
 

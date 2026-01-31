@@ -5,6 +5,7 @@
 #include "Model/Package/VMMaterial.h"
 #include "Model/Network/VMRepSpatialItemNet.h"
 #include "Region/VRegionClientJobs.h"
+#include "Region/VRegionRenderQueue.h"
 #include "VRegionClient.generated.h"
 
 class URegionClientBridge;
@@ -81,6 +82,7 @@ private:
 	TArray<FVRegionClientJob> JobQueue;
 	TMap<FVRegionClientJobKey, int32> CoalescedJobIndices;
 	uint64 JobSequence = 0;
+	FVRegionRenderQueue RenderQueue;
 
 	TObjectPtr<UVAssetManager> AssetManager = nullptr;
 	TObjectPtr<UVRegionClientResolver> RegionClientResolver = nullptr;
