@@ -17,7 +17,6 @@ class UVMeshPresenter;
 class UVAssetManager;
 class UVRegionResolver;
 class UVRegionPresenter;
-class APawn;
 
 UCLASS()
 class VWCLIENT_API AVRegionClient : public AActor
@@ -29,9 +28,6 @@ public:
 
 	// Called by the local player controller to update streaming state.
 	void OnSpatialBatchReceived(const TArray<FVMSpatialItemNet>& Items, bool bHasMore);
-
-	// Enable/disable client-driven spatial streaming.
-	void SetSpatialStreamingEnabled(bool bEnabled);
 
 protected:
 	virtual void BeginPlay() override;
@@ -59,37 +55,16 @@ private:
 	UPROPERTY()
 	TObjectPtr<URegionClientBridge> RegionBridge;
 
-	UPROPERTY()
-	TWeakObjectPtr<APawn> CachedPawn;
-
 	// Cached asset manager pointer (world subsystem)
 	UPROPERTY()
 	TObjectPtr<UVAssetManager> AssetManager;
 
 	// --- Client spatial streaming state (driven by RegionClient tick) ---
-	bool bSpatialStreamActive = false;
-	bool bSpatialRequestInFlight = false;
-	bool bSpatialHasMore = true;
-	FVector SpatialOrigin = FVector::ZeroVector;
-	// When player moves farther than this from SpatialOrigin, request priority recenters.
-	float SpatialRecenterDistanceCm = 5000.f;
-	
-	// Optional: only stream spatial items within this radius. Set <= 0 to disable.
-	// If we move while a request is in flight, defer the recenter until the response arrives.
-	bool bSpatialRecenterPending = false;
-	FVector PendingSpatialOrigin = FVector::ZeroVector;
-	int32 MaxSpatialItemsPerRequest = 64;
 	int32 MaxResolvedBundlesPerTick = 64;
-
-	// Helper to issue the next spatial request via the owning controller interface.
-	void RequestNextSpatialBatch();
 
 	TArray<TArray<FVMSpatialItemNet>> PendingSpatialBatches;
 	TArray<TArray<FVMMaterial>> PendingMaterialBatches;
 public:
 	// Called by the local player controller when a material batch response arrives.
 	void OnMaterialsBatchReceived(const TArray<FVMMaterial>& Materials);
-
-	// Called when a spatial item unloads.
-	void OnSpatialItemRemoved(const FGuid& ItemId) const;
 };

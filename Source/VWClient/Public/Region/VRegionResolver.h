@@ -91,7 +91,6 @@ public:
 
 	void OnSpatialBatchReceived(const TArray<FVMSpatialItemNet>& Items);
 	void OnMaterialsBatchReceived(const TArray<FVMMaterial>& Materials);
-	void OnSpatialItemRemoved(const FGuid& ItemId);
 
 	bool IsBundleReady(const FGuid& ItemId) const;
 
@@ -106,7 +105,6 @@ private:
 	TMap<FGuid, FResolvedSpatialInstance> ResolvedInstances;
 
 	TArray<FGuid> SpatialOrder;
-	TSet<FGuid> RemovedItemIds;
 	TSet<FGuid> IssuedItemIds;
 
 	TSet<FGuid> RequestedMaterialIds;
