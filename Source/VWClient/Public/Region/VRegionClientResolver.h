@@ -27,7 +27,9 @@ public:
 	};
 
 	bool GetItemSnapshot(const FGuid& ItemId, FRegionClientItemSnapshot& OutSnapshot) const;
+	bool IsItemGenerationCurrent(const FGuid& ItemId, uint32 ExpectedGeneration) const;
 	void MarkApplied(const FGuid& ItemId, EVRegionRenderWorkType WorkType);
+	bool FinalizeDestroy(const FGuid& ItemId, uint32 ExpectedGeneration);
 	bool MarkLegacyFallbackAttempted(const FGuid& ItemId, EVRegionRenderWorkType WorkType);
 	bool FindItemUsingMaterial(const FGuid& MaterialId, FGuid& OutItemId, uint32& OutGeneration) const;
 	bool IsItemUsingMaterial(const FGuid& ItemId, const FGuid& MaterialId, uint32 ExpectedGeneration) const;
@@ -45,5 +47,6 @@ private:
 
 	TMap<FGuid, FRegionClientItemState> ItemStates;
 	TSet<FGuid> DirtyItemIds;
+	TSet<FGuid> PendingDestroyItemIds;
 	TWeakObjectPtr<UVAssetManager> AssetManager;
 };

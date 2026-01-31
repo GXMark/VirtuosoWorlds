@@ -91,6 +91,7 @@ void UVRegionClientResolver::ConsumeJob(const FVRegionClientJob& Job)
 
 			FRegionClientItemState& State = ItemStates.FindOrAdd(Job.ItemId);
 			State.DesiredMeshAssetId = Job.MeshAssetId;
+			++State.Generation;
 			State.AppliedMask &= ~kAppliedMeshMask;
 			State.AppliedMask &= ~kAppliedMaterialsMask;
 			State.LegacyFallbackMask &= ~kFallbackMeshMask;
@@ -107,6 +108,7 @@ void UVRegionClientResolver::ConsumeJob(const FVRegionClientJob& Job)
 
 			FRegionClientItemState& State = ItemStates.FindOrAdd(Job.ItemId);
 			State.DesiredMaterialIdsBySlot = Job.MaterialIdsBySlot;
+			++State.Generation;
 			State.AppliedMask &= ~kAppliedMaterialsMask;
 			State.LegacyFallbackMask &= ~kFallbackMaterialsMask;
 			DirtyItemIds.Add(Job.ItemId);
@@ -126,6 +128,7 @@ void UVRegionClientResolver::ConsumeJob(const FVRegionClientJob& Job)
 			State.AppliedMask = 0;
 			State.LegacyFallbackMask = 0;
 			++State.Generation;
+			PendingDestroyItemIds.Add(Job.ItemId);
 			DirtyItemIds.Remove(Job.ItemId);
 			break;
 		}
@@ -186,6 +189,22 @@ void UVRegionClientResolver::ConsumeJob(const FVRegionClientJob& Job)
 
 void UVRegionClientResolver::EmitRenderWork(FVRegionRenderQueue& RenderQueue, UVAssetManager* InAssetManager)
 {
+	if (!PendingDestroyItemIds.IsEmpty())
+	{
+		for (const FGuid& ItemId : PendingDestroyItemIds)
+		{
+			if (FRegionClientItemState* State = ItemStates.Find(ItemId))
+			{
+				FVRegionRenderWorkItem WorkItem;
+				WorkItem.WorkType = EVRegionRenderWorkType::Destroy;
+				WorkItem.ItemId = ItemId;
+				WorkItem.Generation = State->Generation;
+				RenderQueue.Enqueue(MoveTemp(WorkItem));
+			}
+		}
+		PendingDestroyItemIds.Reset();
+	}
+
 	UVAssetManager* EffectiveAssetManager = InAssetManager;
 	if (!EffectiveAssetManager && AssetManager.IsValid())
 	{
@@ -223,6 +242,7 @@ void UVRegionClientResolver::EmitRenderWork(FVRegionRenderQueue& RenderQueue, UV
 			WorkItem.WorkType = EVRegionRenderWorkType::SetMesh;
 			WorkItem.ItemId = ItemId;
 			WorkItem.MeshAssetId = State->DesiredMeshAssetId;
+			WorkItem.Generation = State->Generation;
 			RenderQueue.Enqueue(MoveTemp(WorkItem));
 		}
 
@@ -232,6 +252,7 @@ void UVRegionClientResolver::EmitRenderWork(FVRegionRenderQueue& RenderQueue, UV
 			WorkItem.WorkType = EVRegionRenderWorkType::ApplyMaterials;
 			WorkItem.ItemId = ItemId;
 			WorkItem.MaterialIdsBySlot = State->DesiredMaterialIdsBySlot;
+			WorkItem.Generation = State->Generation;
 			RenderQueue.Enqueue(MoveTemp(WorkItem));
 		}
 
@@ -258,6 +279,16 @@ bool UVRegionClientResolver::GetItemSnapshot(const FGuid& ItemId, FRegionClientI
 	return false;
 }
 
+bool UVRegionClientResolver::IsItemGenerationCurrent(const FGuid& ItemId, uint32 ExpectedGeneration) const
+{
+	if (const FRegionClientItemState* State = ItemStates.Find(ItemId))
+	{
+		return State->Generation == ExpectedGeneration;
+	}
+
+	return false;
+}
+
 void UVRegionClientResolver::MarkApplied(const FGuid& ItemId, EVRegionRenderWorkType WorkType)
 {
 	FRegionClientItemState* State = ItemStates.Find(ItemId);
@@ -277,6 +308,20 @@ void UVRegionClientResolver::MarkApplied(const FGuid& ItemId, EVRegionRenderWork
 	default:
 		break;
 	}
+}
+
+bool UVRegionClientResolver::FinalizeDestroy(const FGuid& ItemId, uint32 ExpectedGeneration)
+{
+	const FRegionClientItemState* State = ItemStates.Find(ItemId);
+	if (!State || State->Generation != ExpectedGeneration)
+	{
+		return false;
+	}
+
+	ItemStates.Remove(ItemId);
+	DirtyItemIds.Remove(ItemId);
+	PendingDestroyItemIds.Remove(ItemId);
+	return true;
 }
 
 bool UVRegionClientResolver::MarkLegacyFallbackAttempted(const FGuid& ItemId, EVRegionRenderWorkType WorkType)

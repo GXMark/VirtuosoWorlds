@@ -33,7 +33,11 @@ void FVRegionRenderQueue::Enqueue(FVRegionRenderWorkItem&& Item)
 		const FVRegionRenderWorkKey Key{Item.ItemId, Item.WorkType};
 		if (int32* ExistingIndex = CoalescedIndices.Find(Key))
 		{
-			Queue[*ExistingIndex] = MoveTemp(Item);
+			FVRegionRenderWorkItem& ExistingItem = Queue[*ExistingIndex];
+			if (ExistingItem.Generation <= Item.Generation)
+			{
+				ExistingItem = MoveTemp(Item);
+			}
 			return;
 		}
 
@@ -101,5 +105,6 @@ bool FVRegionRenderQueue::ShouldCoalesce(EVRegionRenderWorkType WorkType) const
 	return WorkType == EVRegionRenderWorkType::SetMesh
 		|| WorkType == EVRegionRenderWorkType::ApplyMaterials
 		|| WorkType == EVRegionRenderWorkType::ApplyTextureParams
+		|| WorkType == EVRegionRenderWorkType::Destroy
 		|| WorkType == EVRegionRenderWorkType::SetTransform;
 }

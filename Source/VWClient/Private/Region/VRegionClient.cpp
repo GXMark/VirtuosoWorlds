@@ -342,6 +342,7 @@ void AVRegionClient::HandleTextureParameterReady(
 	{
 		WorkItem.SourceItemId = SourceItemId;
 		WorkItem.SourceGeneration = SourceGeneration;
+		WorkItem.Generation = SourceGeneration;
 	}
 
 	RenderQueue.Enqueue(MoveTemp(WorkItem));
@@ -581,6 +582,16 @@ bool AVRegionClient::ApplyRenderWork(const FVRegionRenderWorkItem& Item)
 	if (Item.WorkType == EVRegionRenderWorkType::ApplyTextureParams)
 	{
 		return ApplyTextureParamsWork(Item);
+	}
+
+	if (!RegionClientResolver->IsItemGenerationCurrent(Item.ItemId, Item.Generation))
+	{
+		return false;
+	}
+
+	if (Item.WorkType == EVRegionRenderWorkType::Destroy)
+	{
+		return RegionClientResolver->FinalizeDestroy(Item.ItemId, Item.Generation);
 	}
 
 	UVRegionClientResolver::FRegionClientItemSnapshot Snapshot;
