@@ -33,6 +33,7 @@ struct VWCLIENT_API FVRegionRenderWorkItem
 	FName TextureParameter;
 	FGuid SourceItemId;
 	uint32 SourceGeneration = 0;
+	uint32 Generation = 0;
 	TWeakObjectPtr<UMaterialInstanceDynamic> MaterialInstance;
 	FTransform Transform;
 	int32 Weight = 1;
