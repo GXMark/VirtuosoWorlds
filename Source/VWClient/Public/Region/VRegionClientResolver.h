@@ -29,6 +29,8 @@ public:
 	bool GetItemSnapshot(const FGuid& ItemId, FRegionClientItemSnapshot& OutSnapshot) const;
 	void MarkApplied(const FGuid& ItemId, EVRegionRenderWorkType WorkType);
 	bool MarkLegacyFallbackAttempted(const FGuid& ItemId, EVRegionRenderWorkType WorkType);
+	bool FindItemUsingMaterial(const FGuid& MaterialId, FGuid& OutItemId, uint32& OutGeneration) const;
+	bool IsItemUsingMaterial(const FGuid& ItemId, const FGuid& MaterialId, uint32 ExpectedGeneration) const;
 
 private:
 	struct FRegionClientItemState

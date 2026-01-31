@@ -12,10 +12,25 @@
 #include "Utility/VCrunchUtility.h"
 #include "Async/Async.h"
 #include "Engine/World.h"
+#include "HAL/IConsoleManager.h"
 
 FString UVAssetManager::CachePath;
 FString UVAssetManager::CDN_URL;
 FString UVAssetManager::CDN_Password;
+
+namespace
+{
+	TAutoConsoleVariable<int32> CVarDeferMidTexturePatch(
+		TEXT("vw.assets.defer_mid_texture_patch"),
+		1,
+		TEXT("Defer MID texture parameter application to the region render queue."),
+		ECVF_Default);
+
+	bool ShouldDeferMidTexturePatch()
+	{
+		return CVarDeferMidTexturePatch.GetValueOnGameThread() != 0;
+	}
+} // namespace
 
 void UVAssetManager::Initialize(FSubsystemCollectionBase& InOutCollection)
 {
@@ -650,6 +665,16 @@ UStaticMesh* UVAssetManager::GetCachedStaticMesh(const FGuid& InMeshId) const
 	return MeshAgent->GetMesh(InMeshId);
 }
 
+UTexture2D* UVAssetManager::GetCachedTexture(const FGuid& InTextureId) const
+{
+	if (!TextureAgent)
+	{
+		return nullptr;
+	}
+
+	return TextureAgent->GetTexture(InTextureId);
+}
+
 UMaterialInstanceDynamic* UVAssetManager::GetCachedMaterialInstance(const FGuid& InMaterialId) const
 {
 	if (!MaterialAgent)
@@ -882,7 +907,7 @@ void UVAssetManager::TryResolveMaterialInstance(const FGuid& InMaterialId)
 	for (const FVMTexture& TexItem : MaterialItem.textures)
 	{
 		RequestTextureAsync(TexItem, FVOnTextureLoaded::CreateLambda(
-			[this, InMaterialId, Property = TexItem.property](UTexture2D* LoadedTex)
+			[this, InMaterialId, TextureId = TexItem.asset_ref.id, Property = TexItem.property](UTexture2D* LoadedTex)
 			{
 				if (!LoadedTex || !MaterialAgent)
 				{
@@ -890,6 +915,12 @@ void UVAssetManager::TryResolveMaterialInstance(const FGuid& InMaterialId)
 				}
 				if (UMaterialInstanceDynamic* LiveMID = MaterialAgent->GetMaterial(InMaterialId))
 				{
+					if (ShouldDeferMidTexturePatch() && TextureParameterReadyEvent.IsBound())
+					{
+						TextureParameterReadyEvent.Broadcast(InMaterialId, Property, TextureId, LiveMID);
+						return;
+					}
+
 					LiveMID->SetTextureParameterValue(Property, LoadedTex);
 				}
 			}));

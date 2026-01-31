@@ -13,6 +13,7 @@ class URegionClientBridge;
 class UVAssetManager;
 class UVMaterialPresenterApplier;
 class UVMaterialResolver;
+class UMaterialInstanceDynamic;
 
 USTRUCT()
 struct FSpatialActorVisualState
@@ -63,6 +64,11 @@ private:
 	void HandleSpatialActorPostInit(AActor* Actor, const FSpatialItemId& SpatialId);
 	void HandleMeshAssetIdChanged(AActor* Actor, const FMeshAssetId& MeshAssetId);
 	void HandleMaterialIdsChanged(AActor* Actor, const TArray<uint32>& MaterialIds);
+	void HandleTextureParameterReady(
+		const FGuid& MaterialId,
+		const FName& ParameterName,
+		const FGuid& TextureId,
+		UMaterialInstanceDynamic* MaterialInstance);
 
 	UFUNCTION()
 	void HandleActorDestroyed(AActor* Actor);
@@ -78,6 +84,7 @@ private:
 	bool ApplyRenderWork(const FVRegionRenderWorkItem& Item);
 	bool ApplyMeshWork(const FVRegionRenderWorkItem& Item, AActor* Actor) const;
 	bool ApplyMaterialsWork(const FVRegionRenderWorkItem& Item, AActor* Actor) const;
+	bool ApplyTextureParamsWork(const FVRegionRenderWorkItem& Item) const;
 	bool ApplyLegacyFallback(
 		const FVRegionRenderWorkItem& Item,
 		AActor* Actor,
@@ -100,4 +107,5 @@ private:
 	FDelegateHandle PostInitHandle;
 	FDelegateHandle MeshAssetHandle;
 	FDelegateHandle MaterialIdsHandle;
+	FDelegateHandle TextureReadyHandle;
 };

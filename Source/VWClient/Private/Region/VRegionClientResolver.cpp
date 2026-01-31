@@ -39,6 +39,16 @@ namespace
 
 		return true;
 	}
+
+	bool MaterialIdMatches(const FGuid& MaterialGuid, uint32 MaterialId)
+	{
+		if (!MaterialGuid.IsValid() || MaterialId == 0)
+		{
+			return false;
+		}
+
+		return ResolveMaterialGuid(MaterialId) == MaterialGuid;
+	}
 } // namespace
 
 void UVRegionClientResolver::Initialize(UVAssetManager* InAssetManager)
@@ -297,4 +307,52 @@ bool UVRegionClientResolver::MarkLegacyFallbackAttempted(const FGuid& ItemId, EV
 
 	State->LegacyFallbackMask |= Mask;
 	return true;
+}
+
+bool UVRegionClientResolver::FindItemUsingMaterial(const FGuid& MaterialId, FGuid& OutItemId, uint32& OutGeneration) const
+{
+	if (!MaterialId.IsValid())
+	{
+		return false;
+	}
+
+	for (const auto& ItemPair : ItemStates)
+	{
+		const FRegionClientItemState& State = ItemPair.Value;
+		for (const uint32 MaterialSlotId : State.DesiredMaterialIdsBySlot)
+		{
+			if (MaterialIdMatches(MaterialId, MaterialSlotId))
+			{
+				OutItemId = ItemPair.Key;
+				OutGeneration = State.Generation;
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+bool UVRegionClientResolver::IsItemUsingMaterial(const FGuid& ItemId, const FGuid& MaterialId, uint32 ExpectedGeneration) const
+{
+	const FRegionClientItemState* State = ItemStates.Find(ItemId);
+	if (!State)
+	{
+		return false;
+	}
+
+	if (State->Generation != ExpectedGeneration)
+	{
+		return false;
+	}
+
+	for (const uint32 MaterialSlotId : State->DesiredMaterialIdsBySlot)
+	{
+		if (MaterialIdMatches(MaterialId, MaterialSlotId))
+		{
+			return true;
+		}
+	}
+
+	return false;
 }

@@ -100,5 +100,6 @@ bool FVRegionRenderQueue::ShouldCoalesce(EVRegionRenderWorkType WorkType) const
 {
 	return WorkType == EVRegionRenderWorkType::SetMesh
 		|| WorkType == EVRegionRenderWorkType::ApplyMaterials
+		|| WorkType == EVRegionRenderWorkType::ApplyTextureParams
 		|| WorkType == EVRegionRenderWorkType::SetTransform;
 }

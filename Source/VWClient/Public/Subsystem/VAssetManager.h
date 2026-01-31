@@ -20,6 +20,12 @@ DECLARE_DELEGATE_OneParam(FVOnTextureLoaded, UTexture2D*);
 
 class UMaterialInstanceDynamic;
 DECLARE_DELEGATE_OneParam(FVOnMaterialInstanceLoaded, UMaterialInstanceDynamic*);
+DECLARE_MULTICAST_DELEGATE_FourParams(
+	FVOnTextureParameterReady,
+	const FGuid&,
+	const FName&,
+	const FGuid&,
+	UMaterialInstanceDynamic*);
 
 /**
  * Asset Manager
@@ -65,8 +71,14 @@ public:
 
 	// Cached lookups (no direct agent access outside AssetManager).
 	UStaticMesh* GetCachedStaticMesh(const FGuid& InMeshId) const;
+	UTexture2D* GetCachedTexture(const FGuid& InTextureId) const;
 	UMaterialInstanceDynamic* GetCachedMaterialInstance(const FGuid& InMaterialId) const;
 	bool GetMaterialItem(const FGuid& InMaterialId, FVMMaterial& OutMaterialItem) const;
+
+	FVOnTextureParameterReady& OnTextureParameterReady()
+	{
+		return TextureParameterReadyEvent;
+	}
 
 	/**
 	 * Throttle for concurrent remote asset requests (download + load).
@@ -112,6 +124,8 @@ private:
 
 	// Coalesce concurrent requests per MaterialId
 	TMap<FGuid, TArray<FVOnMaterialInstanceLoaded>> PendingMaterialLoads;
+
+	FVOnTextureParameterReady TextureParameterReadyEvent;
 
 	// --------------------
 	// Remote request queue (packaged runtime)
