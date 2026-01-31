@@ -136,7 +136,7 @@ void AVRegionClient::Tick(float DeltaSeconds)
 
 	if (JobsDrainedThisTick > 0)
 	{
-		JobQueue.RemoveAt(0, JobsDrainedThisTick, false);
+		JobQueue.RemoveAt(0, JobsDrainedThisTick, EAllowShrinking::No);
 		CoalescedJobIndices.Reset();
 		for (int32 Index = 0; Index < JobQueue.Num(); ++Index)
 		{
