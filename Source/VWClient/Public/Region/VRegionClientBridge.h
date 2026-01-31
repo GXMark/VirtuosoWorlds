@@ -7,7 +7,7 @@
 #include "VRegionClientBridge.generated.h"
 
 /**
- * Region bridge used by AVRegionClient to issue spatial/material requests through the owning controller.
+ * Region bridge used by the region client subsystem to issue spatial/material requests through the owning controller.
  *
  * This keeps VWClient independent of the VirtuosoWorlds module.
  */

@@ -6,7 +6,6 @@
 #include "Blueprint/UserWidget.h"
 #include "RHI.h"
 #include "RendererInterface.h"
-#include "EngineUtils.h"
 #include "VPlayerState.h"
 #include "JsonObjectConverter.h"
 
@@ -17,16 +16,13 @@
 
 #if WITH_CLIENT_CODE
 #include "Subsystem/VAssetManager.h"
-#include "Region/VRegionClient.h"
-#if WITH_CLIENT_CODE
 #include "Subsystem/VRegionClientSubsystem.h"
-#endif
 #include "Region/VRegionClientBridge.h"
 #endif
 
 AVPlayerController::AVPlayerController()
 {
-	// Streaming is tick-driven by AVRegionClient. PlayerController remains an RPC endpoint.
+	// Client streaming is handled by the region client subsystem.
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
 	PrimaryActorTick.TickInterval = 0.f;
@@ -136,11 +132,6 @@ void AVPlayerController::BeginPlay()
 			}
 		}
 
-		// Spawn the region-client
-		FActorSpawnParameters SpawnParams;
-		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-		AVRegionClient* RegionClient = GetWorld()->SpawnActor<AVRegionClient>(AVRegionClient::StaticClass(), SpawnParams);
-		(void)RegionClient;
 #endif
 	}
 }
@@ -343,24 +334,13 @@ void AVPlayerController::ClientReceiveSpatialItems_Implementation(const TArray<F
 		ServerSpawnPlayer();
 	}
 
-	// Forward to the region client presenter.
 	UWorld* World = GetWorld();
 	if (!World)
 	{
 		return;
 	}
-
-	AVRegionClient* RegionClient = nullptr;
-	for (TActorIterator<AVRegionClient> It(World); It; ++It)
-	{
-		RegionClient = *It;
-		break;
-	}
-
-	if (RegionClient)
-	{
-		RegionClient->OnSpatialBatchReceived(Items, bHasMore);
-	}
+	(void)Items;
+	(void)bHasMore;
 #endif
 }
 
@@ -408,18 +388,6 @@ void AVPlayerController::ClientReceiveMaterialsBatch_Implementation(const TArray
 	if (!World)
 	{
 		return;
-	}
-
-	AVRegionClient* RegionClient = nullptr;
-	for (TActorIterator<AVRegionClient> It(World); It; ++It)
-	{
-		RegionClient = *It;
-		break;
-	}
-
-	if (RegionClient)
-	{
-		RegionClient->OnMaterialsBatchReceived(Materials);
 	}
 
 	if (URegionClientSubsystem* RegionSubsystem = World->GetSubsystem<URegionClientSubsystem>())
