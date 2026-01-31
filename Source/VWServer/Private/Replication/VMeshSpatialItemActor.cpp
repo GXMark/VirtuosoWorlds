@@ -18,6 +18,8 @@ AVMeshSpatialItemActor::AVMeshSpatialItemActor()
 
 void AVMeshSpatialItemActor::InitializeFromItem(const FVMRepMeshSpatialItem& InItem)
 {
+	bIsStaticMeshItem = IsStaticItem(InItem);
+
 	SpatialItemId = InItem.Id;
 	ReplicatedTransform = InItem.Transform;
 	MeshAssetId = InItem.MeshAssetId;
@@ -31,11 +33,16 @@ void AVMeshSpatialItemActor::InitializeFromItem(const FVMRepMeshSpatialItem& InI
 	Flags = InItem.Flags;
 
 	ApplyTransform();
+	ApplyDormancyFromItem(InItem, false);
 }
 
 void AVMeshSpatialItemActor::UpdateFromItem(const FVMRepMeshSpatialItem& InItem)
 {
+	const bool bTransformChanged = HasTransformChanged(ReplicatedTransform, InItem.Transform);
+	const bool bMaterialsChanged = HasMaterialIdsChanged(MaterialIdsBySlot, InItem.MaterialIdsBySlot);
+
 	InitializeFromItem(InItem);
+	ApplyDormancyFromItem(InItem, bTransformChanged || bMaterialsChanged);
 }
 
 UStaticMeshComponent* AVMeshSpatialItemActor::GetMeshComponent() const
@@ -105,6 +112,52 @@ void AVMeshSpatialItemActor::ApplyTransform()
 	SetActorTransform(ToTransform(ReplicatedTransform));
 }
 
+bool AVMeshSpatialItemActor::IsStaticItem(const FVMRepMeshSpatialItem& InItem)
+{
+	constexpr uint8 StaticFlag = 1 << 0;
+	return InItem.bHasFlags && (InItem.Flags & StaticFlag) != 0;
+}
+
+bool AVMeshSpatialItemActor::HasTransformChanged(const FVMTransformNet& Current, const FVMTransformNet& Incoming)
+{
+	if (Current.Location != Incoming.Location)
+	{
+		return true;
+	}
+
+	if (!Current.Rotation.Identical(&Incoming.Rotation, 0))
+	{
+		return true;
+	}
+
+	if (Current.bHasScale != Incoming.bHasScale)
+	{
+		return true;
+	}
+
+	return Current.bHasScale && Current.Scale != Incoming.Scale;
+}
+
+bool AVMeshSpatialItemActor::HasMaterialIdsChanged(
+	const TArray<uint32>& Current,
+	const TArray<FMaterialId>& Incoming)
+{
+	if (Current.Num() != Incoming.Num())
+	{
+		return true;
+	}
+
+	for (int32 Index = 0; Index < Current.Num(); ++Index)
+	{
+		if (Current[Index] != Incoming[Index].Value)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 FTransform AVMeshSpatialItemActor::ToTransform(const FVMTransformNet& InTransform)
 {
 	FTransform Out;
@@ -112,6 +165,27 @@ FTransform AVMeshSpatialItemActor::ToTransform(const FVMTransformNet& InTransfor
 	Out.SetRotation(InTransform.Rotation.ToQuat());
 	Out.SetScale3D(InTransform.bHasScale ? FVector(InTransform.Scale) : FVector(1.f, 1.f, 1.f));
 	return Out;
+}
+
+void AVMeshSpatialItemActor::ApplyDormancyFromItem(const FVMRepMeshSpatialItem& InItem, bool bForceWake)
+{
+	if (!HasAuthority() || !bIsStaticMeshItem)
+	{
+		return;
+	}
+
+	if (bForceWake)
+	{
+		SetNetDormancy(DORM_Awake);
+		ForceNetUpdate();
+		SetNetDormancy(DORM_DormantAll);
+		return;
+	}
+
+	if (InItem.bHasFlags)
+	{
+		SetNetDormancy(DORM_Initial);
+	}
 }
 
 void AVMeshSpatialItemActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
