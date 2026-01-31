@@ -101,6 +101,7 @@ void URegionClientSubsystem::HandleMeshAssetIdChanged(AActor* Actor, const FMesh
 	FSpatialActorVisualState& State = VisualStates.FindOrAdd(ItemId);
 	State.MeshAssetId = MeshAssetId;
 	State.bMeshPending = true;
+	State.bForceMaterialReapply = true;
 
 	TryApplyMesh(ItemId, Actor, State);
 }
@@ -119,8 +120,30 @@ void URegionClientSubsystem::HandleMaterialIdsChanged(AActor* Actor, const TArra
 	}
 
 	FSpatialActorVisualState& State = VisualStates.FindOrAdd(ItemId);
+	const TArray<uint32> PreviousMaterialIds = State.MaterialIdsBySlot;
 	State.MaterialIdsBySlot = MaterialIds;
 	State.bMaterialsPending = true;
+	State.PendingMaterialSlots.Reset();
+
+	const int32 NewCount = MaterialIds.Num();
+	const int32 OldCount = PreviousMaterialIds.Num();
+	const int32 CompareCount = FMath::Max(NewCount, OldCount);
+	State.PendingMaterialSlots.Reserve(CompareCount);
+
+	for (int32 Index = 0; Index < NewCount; ++Index)
+	{
+		const bool bSlotChanged = Index >= OldCount || PreviousMaterialIds[Index] != MaterialIds[Index];
+		if (bSlotChanged)
+		{
+			State.PendingMaterialSlots.Add(Index);
+		}
+	}
+
+	if (State.PendingMaterialSlots.Num() == 0 && !State.bForceMaterialReapply)
+	{
+		State.bMaterialsPending = false;
+		return;
+	}
 
 	TryApplyMaterials(ItemId, Actor, State);
 }
@@ -213,6 +236,12 @@ void URegionClientSubsystem::SyncVisualStateFromActor(AActor* Actor, const FGuid
 		FSpatialActorVisualState& State = VisualStates.FindOrAdd(ItemId);
 		State.MeshAssetId = MeshInterface->GetSpatialMeshAssetId();
 		State.MaterialIdsBySlot = MeshInterface->GetSpatialMaterialIdsBySlot();
+		State.PendingMaterialSlots.Reset();
+		State.PendingMaterialSlots.Reserve(State.MaterialIdsBySlot.Num());
+		for (int32 Index = 0; Index < State.MaterialIdsBySlot.Num(); ++Index)
+		{
+			State.PendingMaterialSlots.Add(Index);
+		}
 		State.bMeshPending = true;
 		State.bMaterialsPending = true;
 
@@ -262,7 +291,29 @@ void URegionClientSubsystem::TryApplyMaterials(const FGuid& ItemId, AActor* Acto
 	{
 		if (UStaticMeshComponent* MeshComp = MeshInterface->GetSpatialMeshComponent())
 		{
-			MaterialPresenter->ApplyMaterials(MeshComp, State.MaterialIdsBySlot);
+			if (!State.bForceMaterialReapply && State.PendingMaterialSlots.Num() == 0)
+			{
+				State.bMaterialsPending = false;
+				return;
+			}
+
+			if (State.bForceMaterialReapply)
+			{
+				TArray<int32> AllSlots;
+				AllSlots.Reserve(State.MaterialIdsBySlot.Num());
+				for (int32 Index = 0; Index < State.MaterialIdsBySlot.Num(); ++Index)
+				{
+					AllSlots.Add(Index);
+				}
+				MaterialPresenter->ApplyMaterialsForSlots(MeshComp, State.MaterialIdsBySlot, AllSlots);
+				State.bForceMaterialReapply = false;
+				State.PendingMaterialSlots.Reset();
+			}
+			else if (State.PendingMaterialSlots.Num() > 0)
+			{
+				MaterialPresenter->ApplyMaterialsForSlots(MeshComp, State.MaterialIdsBySlot, State.PendingMaterialSlots);
+				State.PendingMaterialSlots.Reset();
+			}
 			State.bMaterialsPending = false;
 		}
 	}

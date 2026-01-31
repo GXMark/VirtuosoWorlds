@@ -18,6 +18,8 @@ struct FSpatialActorVisualState
 
 	FMeshAssetId MeshAssetId;
 	TArray<uint32> MaterialIdsBySlot;
+	TArray<int32> PendingMaterialSlots;
+	bool bForceMaterialReapply = false;
 	bool bMeshPending = true;
 	bool bMaterialsPending = true;
 };
