@@ -77,9 +77,6 @@ public:
 	UFUNCTION(Client, Reliable)
 	void ClientReceiveMaterialsBatch(const TArray<FVMMaterial>& Materials);
 
-	UFUNCTION(BlueprintCallable, Category="Spatial")
-	float GetSpatialDistancePercent() const;
-	
 protected:
 
 	UPROPERTY(EditDefaultsOnly, Category="Input")
@@ -130,7 +127,4 @@ private:
 	TWeakObjectPtr<AVRegionClient> RegionClient;
 #endif
 
-	float MaxSpatialDistance = 0.f;
-	int32 SpatialItemsReceived = 0;
-	bool bSpawnedAtSpatialThreshold = false;
 };
