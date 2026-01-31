@@ -4,6 +4,7 @@
 #include "GameFramework/Actor.h"
 #include "Model/Package/VMMaterial.h"
 #include "Model/Network/VMRepSpatialItemNet.h"
+#include "Region/VRegionClientJobs.h"
 #include "VRegionClient.generated.h"
 
 class URegionClientBridge;
@@ -40,12 +41,31 @@ public:
 	static AVRegionClient* Get(const UObject* WorldContext);
 
 private:
+	struct FVRegionClientJobKey
+	{
+		FGuid ItemId;
+		EVRegionClientJobType JobType = EVRegionClientJobType::SpatialActorObserved;
+
+		friend bool operator==(const FVRegionClientJobKey& Left, const FVRegionClientJobKey& Right)
+		{
+			return Left.ItemId == Right.ItemId && Left.JobType == Right.JobType;
+		}
+	};
+
+	friend uint32 GetTypeHash(const FVRegionClientJobKey& Key)
+	{
+		return HashCombine(GetTypeHash(Key.ItemId), GetTypeHash(static_cast<uint8>(Key.JobType)));
+	}
+
 	void HandleSpatialActorPostInit(AActor* Actor, const FSpatialItemId& SpatialId);
 	void HandleMeshAssetIdChanged(AActor* Actor, const FMeshAssetId& MeshAssetId);
 	void HandleMaterialIdsChanged(AActor* Actor, const TArray<uint32>& MaterialIds);
 
 	UFUNCTION()
 	void HandleActorDestroyed(AActor* Actor);
+
+	void EnqueueJob(FVRegionClientJob&& Job);
+	bool ShouldCoalesceJob(EVRegionClientJobType JobType) const;
 
 	void RegisterActor(AActor* Actor, const FGuid& ItemId);
 	FGuid ResolveSpatialId(AActor* Actor, const FSpatialItemId* SpatialIdOverride = nullptr);
@@ -56,6 +76,9 @@ private:
 	TMap<FGuid, TWeakObjectPtr<AActor>> SpatialItemActors;
 	TMap<TWeakObjectPtr<AActor>, FGuid> ActorToSpatialId;
 	TMap<FGuid, FSpatialActorVisualState> VisualStates;
+	TArray<FVRegionClientJob> JobQueue;
+	TMap<FVRegionClientJobKey, int32> CoalescedJobIndices;
+	uint64 JobSequence = 0;
 
 	TObjectPtr<UVAssetManager> AssetManager = nullptr;
 	TObjectPtr<UVMaterialResolver> MaterialResolver = nullptr;
