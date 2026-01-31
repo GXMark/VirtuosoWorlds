@@ -60,10 +60,7 @@ void UVRegionPresenter::PresentBundle(const FResolvedItemBundle& Bundle)
 			Materials.Reserve(Bundle.Materials.Num());
 			for (const TObjectPtr<UMaterialInterface>& Material : Bundle.Materials)
 			{
-				if (Material)
-				{
-					Materials.Add(Material);
-				}
+				Materials.Add(Material);
 			}
 			MaterialPresenter->ApplyMaterials(Bundle.ItemId, MeshComp, Materials);
 		}
