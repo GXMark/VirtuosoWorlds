@@ -169,10 +169,22 @@ void AVRegionClient::Tick(float DeltaSeconds)
 		}
 	}
 
+	if (RegionClientResolver)
+	{
+		RegionClientResolver->EmitRenderWork(RenderQueue, AssetManager);
+	}
+
 	const int32 RenderBudget = FMath::Max(0, CVarRegionClientRenderBudget.GetValueOnGameThread());
 	int32 RenderAppliedCount = 0;
 	int32 RenderBudgetRemaining = RenderBudget;
-	RenderQueue.Drain(RenderBudget, RenderAppliedCount, RenderBudgetRemaining);
+	RenderQueue.Drain(
+		RenderBudget,
+		RenderAppliedCount,
+		RenderBudgetRemaining,
+		[this](const FVRegionRenderWorkItem& Item)
+		{
+			return ApplyRenderWork(Item);
+		});
 
 	if (IsRegionClientDebugEnabled())
 	{
@@ -244,7 +256,6 @@ void AVRegionClient::HandleSpatialActorPostInit(AActor* Actor, const FSpatialIte
 	}
 
 	RegisterActor(Actor, ItemId);
-	SyncVisualStateFromActor(Actor, ItemId);
 }
 
 void AVRegionClient::HandleMeshAssetIdChanged(AActor* Actor, const FMeshAssetId& MeshAssetId)
@@ -260,11 +271,6 @@ void AVRegionClient::HandleMeshAssetIdChanged(AActor* Actor, const FMeshAssetId&
 		return;
 	}
 
-	FSpatialActorVisualState& State = VisualStates.FindOrAdd(ItemId);
-	State.MeshAssetId = MeshAssetId;
-	State.bMeshPending = true;
-	State.bForceMaterialReapply = true;
-
 	{
 		FVRegionClientJob Job;
 		Job.JobType = EVRegionClientJobType::MeshAssetIdChanged;
@@ -274,7 +280,6 @@ void AVRegionClient::HandleMeshAssetIdChanged(AActor* Actor, const FMeshAssetId&
 		EnqueueJob(MoveTemp(Job));
 	}
 
-	TryApplyMesh(ItemId, Actor, State);
 }
 
 void AVRegionClient::HandleMaterialIdsChanged(AActor* Actor, const TArray<uint32>& MaterialIds)
@@ -290,12 +295,6 @@ void AVRegionClient::HandleMaterialIdsChanged(AActor* Actor, const TArray<uint32
 		return;
 	}
 
-	FSpatialActorVisualState& State = VisualStates.FindOrAdd(ItemId);
-	const TArray<uint32> PreviousMaterialIds = State.MaterialIdsBySlot;
-	State.MaterialIdsBySlot = MaterialIds;
-	State.bMaterialsPending = true;
-	State.PendingMaterialSlots.Reset();
-
 	{
 		FVRegionClientJob Job;
 		Job.JobType = EVRegionClientJobType::MaterialIdsChanged;
@@ -304,28 +303,6 @@ void AVRegionClient::HandleMaterialIdsChanged(AActor* Actor, const TArray<uint32
 		Job.Actor = Actor;
 		EnqueueJob(MoveTemp(Job));
 	}
-
-	const int32 NewCount = MaterialIds.Num();
-	const int32 OldCount = PreviousMaterialIds.Num();
-	const int32 CompareCount = FMath::Max(NewCount, OldCount);
-	State.PendingMaterialSlots.Reserve(CompareCount);
-
-	for (int32 Index = 0; Index < NewCount; ++Index)
-	{
-		const bool bSlotChanged = Index >= OldCount || PreviousMaterialIds[Index] != MaterialIds[Index];
-		if (bSlotChanged)
-		{
-			State.PendingMaterialSlots.Add(Index);
-		}
-	}
-
-	if (State.PendingMaterialSlots.Num() == 0 && !State.bForceMaterialReapply)
-	{
-		State.bMaterialsPending = false;
-		return;
-	}
-
-	TryApplyMaterials(ItemId, Actor, State);
 }
 
 void AVRegionClient::HandleActorDestroyed(AActor* Actor)
@@ -481,11 +458,11 @@ void AVRegionClient::SyncVisualStateFromActor(AActor* Actor, const FGuid& ItemId
 	}
 }
 
-void AVRegionClient::TryApplyMesh(const FGuid& ItemId, AActor* Actor, FSpatialActorVisualState& State) const
+bool AVRegionClient::TryApplyMesh(const FGuid& ItemId, AActor* Actor, FSpatialActorVisualState& State) const
 {
 	if (!Actor || !AssetManager)
 	{
-		return;
+		return false;
 	}
 
 	if (ISpatialMeshItemActorInterface* MeshInterface = Cast<ISpatialMeshItemActorInterface>(Actor))
@@ -493,7 +470,7 @@ void AVRegionClient::TryApplyMesh(const FGuid& ItemId, AActor* Actor, FSpatialAc
 		const FGuid MeshId = State.MeshAssetId.Value.Value;
 		if (!MeshId.IsValid())
 		{
-			return;
+			return false;
 		}
 
 		if (UStaticMeshComponent* MeshComp = MeshInterface->GetSpatialMeshComponent())
@@ -502,17 +479,19 @@ void AVRegionClient::TryApplyMesh(const FGuid& ItemId, AActor* Actor, FSpatialAc
 			{
 				MeshComp->SetStaticMesh(MeshAsset);
 				State.bMeshPending = false;
-				TryApplyMaterials(ItemId, Actor, State);
+				return true;
 			}
 		}
 	}
+
+	return false;
 }
 
-void AVRegionClient::TryApplyMaterials(const FGuid& ItemId, AActor* Actor, FSpatialActorVisualState& State) const
+bool AVRegionClient::TryApplyMaterials(const FGuid& ItemId, AActor* Actor, FSpatialActorVisualState& State) const
 {
 	if (!Actor || !MaterialPresenter)
 	{
-		return;
+		return false;
 	}
 
 	if (ISpatialMeshItemActorInterface* MeshInterface = Cast<ISpatialMeshItemActorInterface>(Actor))
@@ -522,7 +501,7 @@ void AVRegionClient::TryApplyMaterials(const FGuid& ItemId, AActor* Actor, FSpat
 			if (!State.bForceMaterialReapply && State.PendingMaterialSlots.Num() == 0)
 			{
 				State.bMaterialsPending = false;
-				return;
+				return false;
 			}
 
 			if (State.bForceMaterialReapply)
@@ -543,6 +522,174 @@ void AVRegionClient::TryApplyMaterials(const FGuid& ItemId, AActor* Actor, FSpat
 				State.PendingMaterialSlots.Reset();
 			}
 			State.bMaterialsPending = false;
+			return true;
 		}
 	}
+
+	return false;
+}
+
+bool AVRegionClient::ApplyRenderWork(const FVRegionRenderWorkItem& Item)
+{
+	if (!RegionClientResolver)
+	{
+		return false;
+	}
+
+	UVRegionClientResolver::FRegionClientItemSnapshot Snapshot;
+	if (!RegionClientResolver->GetItemSnapshot(Item.ItemId, Snapshot))
+	{
+		return false;
+	}
+
+	TWeakObjectPtr<AActor> ActorPtr = Snapshot.Actor;
+	if (!ActorPtr.IsValid())
+	{
+		if (const TWeakObjectPtr<AActor>* FallbackActor = SpatialItemActors.Find(Item.ItemId))
+		{
+			ActorPtr = *FallbackActor;
+		}
+	}
+
+	AActor* Actor = ActorPtr.Get();
+	bool bApplied = false;
+
+	switch (Item.WorkType)
+	{
+	case EVRegionRenderWorkType::SetMesh:
+		bApplied = ApplyMeshWork(Item, Actor);
+		break;
+	case EVRegionRenderWorkType::ApplyMaterials:
+		bApplied = ApplyMaterialsWork(Item, Actor);
+		break;
+	default:
+		break;
+	}
+
+	if (bApplied)
+	{
+		RegionClientResolver->MarkApplied(Item.ItemId, Item.WorkType);
+		return true;
+	}
+
+	if (RegionClientResolver->MarkLegacyFallbackAttempted(Item.ItemId, Item.WorkType))
+	{
+		return ApplyLegacyFallback(Item, Actor, Snapshot);
+	}
+
+	return false;
+}
+
+bool AVRegionClient::ApplyMeshWork(const FVRegionRenderWorkItem& Item, AActor* Actor) const
+{
+	if (!Actor || !AssetManager)
+	{
+		return false;
+	}
+
+	const FGuid MeshId = Item.MeshAssetId.Value.Value;
+	if (!MeshId.IsValid())
+	{
+		return false;
+	}
+
+	if (ISpatialMeshItemActorInterface* MeshInterface = Cast<ISpatialMeshItemActorInterface>(Actor))
+	{
+		if (UStaticMeshComponent* MeshComp = MeshInterface->GetSpatialMeshComponent())
+		{
+			if (UStaticMesh* MeshAsset = AssetManager->GetCachedStaticMesh(MeshId))
+			{
+				MeshComp->SetStaticMesh(MeshAsset);
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+bool AVRegionClient::ApplyMaterialsWork(const FVRegionRenderWorkItem& Item, AActor* Actor) const
+{
+	if (!Actor || !MaterialPresenter)
+	{
+		return false;
+	}
+
+	if (ISpatialMeshItemActorInterface* MeshInterface = Cast<ISpatialMeshItemActorInterface>(Actor))
+	{
+		if (UStaticMeshComponent* MeshComp = MeshInterface->GetSpatialMeshComponent())
+		{
+			if (Item.MaterialIdsBySlot.Num() == 0)
+			{
+				return false;
+			}
+
+			TArray<int32> AllSlots;
+			AllSlots.Reserve(Item.MaterialIdsBySlot.Num());
+			for (int32 Index = 0; Index < Item.MaterialIdsBySlot.Num(); ++Index)
+			{
+				AllSlots.Add(Index);
+			}
+
+			MaterialPresenter->ApplyMaterialsForSlots(MeshComp, Item.MaterialIdsBySlot, AllSlots);
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool AVRegionClient::ApplyLegacyFallback(
+	const FVRegionRenderWorkItem& Item,
+	AActor* Actor,
+	const UVRegionClientResolver::FRegionClientItemSnapshot& Snapshot)
+{
+	if (!Actor)
+	{
+		return false;
+	}
+
+	FSpatialActorVisualState LegacyState;
+	LegacyState.MeshAssetId = Snapshot.MeshAssetId;
+	LegacyState.MaterialIdsBySlot = Snapshot.MaterialIdsBySlot;
+	LegacyState.PendingMaterialSlots.Reset();
+	LegacyState.PendingMaterialSlots.Reserve(LegacyState.MaterialIdsBySlot.Num());
+	for (int32 Index = 0; Index < LegacyState.MaterialIdsBySlot.Num(); ++Index)
+	{
+		LegacyState.PendingMaterialSlots.Add(Index);
+	}
+	LegacyState.bForceMaterialReapply = true;
+	LegacyState.bMeshPending = true;
+	LegacyState.bMaterialsPending = true;
+
+	bool bApplied = false;
+	switch (Item.WorkType)
+	{
+	case EVRegionRenderWorkType::SetMesh:
+		bApplied = TryApplyMesh(Item.ItemId, Actor, LegacyState);
+		if (bApplied)
+		{
+			RegionClientResolver->MarkApplied(Item.ItemId, EVRegionRenderWorkType::SetMesh);
+		}
+		if (bApplied || !LegacyState.MeshAssetId.Value.Value.IsValid())
+		{
+			if (TryApplyMaterials(Item.ItemId, Actor, LegacyState))
+			{
+				RegionClientResolver->MarkApplied(Item.ItemId, EVRegionRenderWorkType::ApplyMaterials);
+				bApplied = true;
+			}
+		}
+		break;
+	case EVRegionRenderWorkType::ApplyMaterials:
+		if (TryApplyMaterials(Item.ItemId, Actor, LegacyState))
+		{
+			RegionClientResolver->MarkApplied(Item.ItemId, EVRegionRenderWorkType::ApplyMaterials);
+			bApplied = true;
+		}
+		break;
+	default:
+		break;
+	}
+
+	return bApplied;
 }
