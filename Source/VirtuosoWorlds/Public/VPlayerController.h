@@ -4,7 +4,6 @@
 #include "GameFramework/PlayerController.h"
 
 // Types used in UFUNCTION / interface signatures must be fully defined before *.generated.h
-#include "Model/Network/VMSpatialItemNet.h"
 #include "Model/Package/VMMaterial.h"
 
 #if WITH_CLIENT_CODE
@@ -42,13 +41,11 @@ public:
 
 #if WITH_CLIENT_CODE
     // IVRegionClientBridgeEndpoint
-    virtual void ClientRequestSpatialItems(const FVector& Origin, int32 MaxItems) override;
     virtual void ClientRequestMaterialsBatch(const TArray<FGuid>& MaterialIds) override;
 #endif
 
 #if WITH_SERVER_CODE
 	// IVRegionServerBridgeEndpoint
-	virtual void ServerSendSpatialItems(const TArray<FVMSpatialItemNet>& Items, bool bHasMore) override;
 	virtual void ServerSendMaterialsBatch(const TArray<FVMMaterial>& Materials) override;
 #endif
 
@@ -62,13 +59,6 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerSpawnPlayer();
 
-
-	// Spatial streaming (server-authoritative)
-	UFUNCTION(Server, Reliable)
-	void ServerRequestSpatialItems(const FVector& Origin, int32 MaxItems);
-
-	UFUNCTION(Client, Reliable)
-	void ClientReceiveSpatialItems(const TArray<FVMSpatialItemNet>& Items, bool bHasMore);
 
 	// Materials (batched)
 	UFUNCTION(Server, Reliable)
@@ -115,9 +105,6 @@ private:
 	
 	UPROPERTY()
 	class UInputAction* LeftClickAction;
-
-	// Optional: server-side radius filter for spatial streaming (0 disables).
-	float SpatialStreamRadiusCm = 0.f;
 
 #if WITH_SERVER_CODE
 	TWeakObjectPtr<URegionServerBridge> RegionServerBridge;
