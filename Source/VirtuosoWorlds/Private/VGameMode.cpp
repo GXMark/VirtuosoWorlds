@@ -148,7 +148,6 @@ void AVGameMode::BeginPlay()
 		}
 	}
 
-	// Spatial items are now streamed on-demand via player controller RPCs.
 }
 
 /**

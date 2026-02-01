@@ -2,15 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
-// NOTE: These types are stored by value in stream state and must be complete in this header.
-#include "Model/Network/VMSpatialItemNet.h"
-#include "Model/Package/VMActor.h"
 #include "Model/Package/VMMaterial.h"
-#include "Model/Package/VMDecalComponent.h"
-#include "Model/Package/VMMeshComponent.h"
-#include "Model/Package/VMPointLightComponent.h"
-#include "Model/Package/VMSpotLightComponent.h"
-#include "Model/Package/VMTransform.h"
 #include "VRegionServerBridge.generated.h"
 
 
@@ -28,12 +20,6 @@ class VWSERVER_API URegionServerBridge : public UObject
 public:
 	void Initialize(UWorld* InWorld);
 
-	// Spatial
-	void HandleSpatialRequest(
-		APlayerController* PC,
-		const FVector& Origin,
-		int32 MaxItems);
-
 	// Materials
 	void HandleMaterialsRequest(
 		APlayerController* PC,
@@ -42,25 +28,4 @@ public:
 private:
 	UPROPERTY()
 	TObjectPtr<UWorld> World;
-
-	// Per-connection stream state
-	struct FSpatialStreamState
-	{
-		TArray<FVMSpatialItemNet> AllItems;
-		TSet<FGuid> DeliveredItemIds;
-		bool bInitialized = false;
-	};
-
-	TMap<TWeakObjectPtr<APlayerController>, FSpatialStreamState> SpatialStreams;
-
-	void EnsureSpatialState(APlayerController* PC);
-	FVMTransformNet MakeNetTransform(const FVMTransform& In) const;
-	FVMMeshComponentNet MakeMeshNet(const FVMMeshComponent& In) const;
-	FVMPointLightComponentNet MakePointLightNet(const FVMPointLightComponent& In) const;
-	FVMSpotLightComponentNet MakeSpotLightNet(const FVMSpotLightComponent& In) const;
-	FVMDecalComponentNet MakeDecalNet(const FVMDecalComponent& In) const;
-	void AddMeshSpatialItem(const FVMActor& Actor, FSpatialStreamState& State) const;
-	void AddPointLightSpatialItem(const FVMActor& Actor, FSpatialStreamState& State) const;
-	void AddSpotLightSpatialItem(const FVMActor& Actor, FSpatialStreamState& State) const;
-	void AddDecalSpatialItem(const FVMActor& Actor, FSpatialStreamState& State) const;
 };

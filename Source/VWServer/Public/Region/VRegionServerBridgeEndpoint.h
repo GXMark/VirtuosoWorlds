@@ -7,7 +7,6 @@
 // These types are used in interface method signatures and must be fully defined
 // in any translation unit that includes this header (e.g., UHT-generated code).
 // Use module-relative includes so this header is robust across module include paths.
-#include "Model/Network/VMSpatialItemNet.h"
 #include "Model/Package/VMMaterial.h"
 #include "VRegionServerBridgeEndpoint.generated.h"
 
@@ -27,6 +26,5 @@ class VWSERVER_API IVRegionServerBridgeEndpoint
 	GENERATED_BODY()
 
 public:
-	virtual void ServerSendSpatialItems(const TArray<FVMSpatialItemNet>& Items, bool bHasMore) = 0;
 	virtual void ServerSendMaterialsBatch(const TArray<FVMMaterial>& Materials) = 0;
 };

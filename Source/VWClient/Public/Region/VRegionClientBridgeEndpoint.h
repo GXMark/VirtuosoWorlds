@@ -27,9 +27,6 @@ class VWCLIENT_API IVRegionClientBridgeEndpoint
 	GENERATED_BODY()
 
 public:
-	/** Request the next batch of spatial items for the given origin. */
-	virtual void ClientRequestSpatialItems(const FVector& Origin, int32 MaxItems) = 0;
-
 	/** Request a batch of material items by id. */
 	virtual void ClientRequestMaterialsBatch(const TArray<FGuid>& MaterialIds) = 0;
 

@@ -59,14 +59,6 @@ AVPlayerController::AVPlayerController()
 }
 
 #if WITH_CLIENT_CODE
-void AVPlayerController::ClientRequestSpatialItems(const FVector& Origin, int32 MaxItems)
-{
-	// Client-driven spatial item requests are disabled; server pushes via replication only.
-	UE_LOG(LogTemp, Verbose, TEXT("PlayerController: ClientRequestSpatialItems ignored (server-authoritative)."));
-	(void)Origin;
-	(void)MaxItems;
-}
-
 void AVPlayerController::ClientRequestMaterialsBatch(const TArray<FGuid>& MaterialIds)
 {
 	ServerRequestMaterialsBatch(MaterialIds);
@@ -303,49 +295,15 @@ void AVPlayerController::ServerRegionState_Implementation()
 
 
 // =========================
-// Spatial streaming RPCs
+// Material RPCs
 // =========================
 
 #if WITH_SERVER_CODE
-void AVPlayerController::ServerSendSpatialItems(const TArray<FVMSpatialItemNet>& Items, bool bHasMore)
-{
-	// Send down to the owning client via existing RPC.
-	ClientReceiveSpatialItems(Items, bHasMore);
-}
-
 void AVPlayerController::ServerSendMaterialsBatch(const TArray<FVMMaterial>& Materials)
 {
 	ClientReceiveMaterialsBatch(Materials);
 }
 #endif
-
-void AVPlayerController::ServerRequestSpatialItems_Implementation(const FVector& Origin, int32 MaxItems)
-{
-#if WITH_SERVER_CODE
-	// Client-driven spatial item requests are disabled; server pushes via replication only.
-	UE_LOG(LogTemp, Verbose, TEXT("PlayerController: ServerRequestSpatialItems ignored (server-authoritative)."));
-	(void)Origin;
-	(void)MaxItems;
-#else
-	ClientReceiveSpatialItems(TArray<FVMSpatialItemNet>(), false);
-#endif
-}
-
-void AVPlayerController::ClientReceiveSpatialItems_Implementation(const TArray<FVMSpatialItemNet>& Items, bool bHasMore)
-{
-#if WITH_CLIENT_CODE
-	// Forward to the region client presenter.
-	UWorld* World = GetWorld();
-	if (!World)
-	{
-		return;
-	}
-#endif
-}
-
-// =========================
-// Material RPCs
-// =========================
 
 void AVPlayerController::ServerRequestMaterialsBatch_Implementation(const TArray<FGuid>& MaterialIds)
 {

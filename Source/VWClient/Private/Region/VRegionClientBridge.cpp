@@ -13,13 +13,6 @@ bool URegionClientBridge::IsValidBridge() const
 		&& OwningController->GetClass()->ImplementsInterface(UVRegionClientBridgeEndpoint::StaticClass());
 }
 
-void URegionClientBridge::RequestSpatialItems(const FVector& Origin, int32 MaxItems) const
-{
-	UE_LOG(LogTemp, Verbose, TEXT("RegionClientBridge: Client spatial item requests are disabled."));
-	(void)Origin;
-	(void)MaxItems;
-}
-
 void URegionClientBridge::RequestMaterialsBatch(const TArray<FGuid>& MaterialIds) const
 {
 	if (!IsValidBridge())
